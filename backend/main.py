@@ -5,89 +5,116 @@ from sqlalchemy import create_engine
 from pathlib import Path
 from setup import *
 from EP_measurable_properties import *
+from dotenv import load_dotenv
+import os
 
 pd.options.mode.copy_on_write = True
 
+load_dotenv(dotenv_path="inputs.env")
+
 # inputs provided by user (to be replaced with input from frontend)
-path_to_ocel = Path('assets/logs/ocel2-p2p').resolve()
-agg_mode = 'mean'
-samp_rate = 'W'
-assign_mech = 'starting'
-res_obj = ''
-#time_int_start = pd.Timestamp('2022-04-01 00:00:00+00:00')
-#time_int_end = pd.Timestamp('2024-11-01 00:00:00+00:00')
-time_int_start = ''
-time_int_end = ''
-end_time_evs = ''
-endtime = 'endtime'
+path_to_ocel = Path(os.getenv('path_to_ocel')).resolve()
+aggregation_mode = os.getenv('aggregation_mode')
+sampling_rate = os.getenv('sampling_rate')
+assignment_mechanism = os.getenv('assignment_mechanism')
+#resource_object_type is the object type whose objects are to be trated as 
+#resource objects for properties in the resource perspective.
+resource_object_type = os.getenv('resource_object_type')
+#endtime is the event attribute that is to be treated as the end time of non-atomic events
+event_endtime_column = os.getenv('events_endtime_attribute')
+#start and end of the time interval over which time series are to be constructed
+int_start = os.getenv('time_series_interval_start')
+int_end = os.getenv('time_series_interval_end')
 
-#We read the tables in the OCEL's sqlite format where feasible for quicker runtime and convert them to dataframes for further
-#process using pandas.
-#We switch to using pm4py's rendition of the OCEL and the variety of functions offered by PM4PY on OCEL when we deem it
-#more suitable than directly using the db tables.
-
-# connect to db i.e. the ocel in sql format
-ocel_db_engine = create_engine(f'sqlite:///{path_to_ocel}.sqlite')
+#We use use the ocel as a pm4py object 'ocel' for data processing and analysis.
 # get ocel as a pm4py object 
-ocel_obj = pm4py.read_ocel2_json(f'{path_to_ocel}.json')
+ocel = pm4py.read_ocel2_json(f'{path_to_ocel}.json')
+#We also use the ocel as a database in cases where it more effecient or convenient to use the tables
+ocel_db_engine = create_engine(f'sqlite:///{path_to_ocel}.sqlite')
+
+#set pm4py ocel column names
+event_id_column = ocel.event_id_column
+event_timestamp_column = ocel.event_timestamp
+event_type_column = ocel.event_activity
+object_id_column = ocel.object_id_column
+object_type_column = ocel.object_type_column
+changed_field_column = ocel.changed_field
+qualifier_column = ocel.qualifier
 
 #setup essential tables(dataframes)
-object_types_to_table_df_map = get_object_types_to_table_df_map(ocel_db_engine)
-event_types_to_table_df_map = get_event_types_to_table_df_map(ocel_db_engine)
-event_object_count_df_map = get_event_object_count_df_map(ocel_obj, event_types_to_table_df_map)
-event_object_combinations = get_event_object_combinations(ocel_obj)
-events_df = get_events_df(ocel_obj)
-objects_df = get_objects_df(ocel_obj)
+object_types_to_db_table_map = get_object_types_to_db_table_map(ocel_db_engine)
+event_types_to_db_table_map = get_event_types_to_db_table_map(ocel_db_engine)
+event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_db_table_map)
+event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
+events_df = get_events_df(ocel)
+objects_df = get_objects_df(ocel)
+event_to_object_relations_df = get_event_to_object_relations_df(ocel)
 
 
-#check if all events in the log are atomic
-if endtime in events_df.columns:
+#check if the specified endtime attribute for events exists. If yes then we assume the presence of 
+# non-atomic events in the log.
+if event_endtime_column in events_df.columns:
     atomic_evs = False
+    #for all atomic events (where endtime column has empty/null values, replace with value in ocel:timestamp column)
+    events_df = adjust_events_end_time(events_df, event_timestamp_column, event_endtime_column)
+    # calculate lifecycle end time for objects to be calculated based on the maximum endtime of all events associated with
+    # an object. 
+    # by default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
+    objects_df = update_object_lifecycle_end_for_non_atomic_events(objects_df, event_to_object_relations_df,\
+                                                                    events_df, event_id_column, object_id_column, \
+                                                                     event_endtime_column)
 else:
     atomic_evs = True
 
 # if time interval start is unspecified, fetch from event log as the earliest timestamp of an event
-if time_int_start == '':
-    time_int_start = events_df['ocel:timestamp'].min()
+if int_start == '':
+    int_start = events_df[event_timestamp_column].min()
     #adjust start so that 1st event can be accounted for in further calculations
-    time_int_start = time_int_start - pd.Timedelta('1m')
+    int_start = int_start - pd.Timedelta('1m')
 
 # if time interval end is unspecified, fetch from event log as 
 # if all events are atomic => the latest ocel:timestamp value of any event
 # if all events are not atomic => the latest endtime value of any event
-if time_int_end == '':
+if int_end == '':
     if atomic_evs:
-        time_int_end = events_df['ocel:timestamp'].max()
+        int_end = events_df[event_timestamp_column].max()
     else:
-        time_int_end = events_df[endtime].max()
+        int_end = events_df[event_endtime_column].max()
 
+
+#<-----------Remove in prod----------->
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
-events_df[endtime] = events_df['ocel:timestamp'].apply(lambda x: pd.to_datetime\
-                                                       (np.random.randint(x.value//10**9, x.value//10**9 + 2592000), unit='s', utc=True))
-#update time_int_end with test endtime max
-time_int_end = events_df[endtime].max()
+events_df[event_endtime_column] = events_df[event_timestamp_column].apply(lambda x: pd.to_datetime\
+                                                (np.random.randint(x.value//10**9, x.value//10**9 + 2592000), unit='s', utc=True))
+#update int_end with test endtime max
+int_end = events_df[event_endtime_column].max()
+atomic_evs = False
+#<------------------------------------>
 
-#get time intervals given the sampling rate and total interval
-time_intervals = get_time_intervals(time_int_start, time_int_end, samp_rate)
+#get time intervals given the sampling rate and total interval. The intervals represent the division of the total interval
+#into time intervals of length equal to the sampling rate. Except the first and last time interval which may be smaller
+#if outside the range of the total interval.
+time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
 #get a cross product of objects and events df with the time intervals
-ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
-ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, endtime)
+#ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
+#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, endtime)
 
 #get list of events and objects assigned to a time interval 
 #if assign_mech = overlap then we get duplicate events/objects
 #if assign_mech = contains then a lot of events/objects are usually discarded
 #if assign_mech = starting or assign_mech = ending then we get the same number of events/objects as in the original ocel
 #atomic events remain unaffected by assign_mech and are neither duplicated nor discarded.
-events_to_time_df = get_events_to_time_df(events_df, time_intervals, 'overlaps', endtime)
-objects_to_time_df = get_objects_to_time_df(objects_df, time_intervals, 'overlaps')
+events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_id_column,\
+                                           event_timestamp_column, event_endtime_column, atomic_evs)
+objects_to_time_df = get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism, object_id_column)
 
 #get all properties of the event perspective
-ep1_dict = ep1(event_types_to_table_df_map, events_to_time_df, samp_rate)
-ep2_dict = ep2(event_types_to_table_df_map, events_to_time_df, agg_mode, samp_rate)
-ep3_dict = ep3(event_object_count_df_map, events_to_time_df, agg_mode, samp_rate)
-ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, agg_mode, samp_rate)
+ep1_dict = ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate)
+ep2_dict = ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampling_rate)
+ep3_dict = ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
+ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
 print(ep1_dict)
 print(ep2_dict)
