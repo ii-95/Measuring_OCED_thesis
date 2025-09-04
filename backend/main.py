@@ -56,13 +56,11 @@ event_to_object_relations_df = get_event_to_object_relations_df(ocel)
 if event_endtime_column in events_df.columns:
     atomic_evs = False
     #for all atomic events (where endtime column has empty/null values, replace with value in ocel:timestamp column)
-    events_df = adjust_events_end_time(events_df, event_timestamp_column, event_endtime_column)
+    events_df = adjust_events_end_time(events_df, event_endtime_column)
     # calculate lifecycle end time for objects to be calculated based on the maximum endtime of all events associated with
-    # an object. 
-    # by default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
+    # an object. By default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
     objects_df = update_object_lifecycle_end_for_non_atomic_events(objects_df, event_to_object_relations_df,\
-                                                                    events_df, event_id_column, object_id_column, \
-                                                                     event_endtime_column)
+                                                                    events_df, event_endtime_column)
 else:
     atomic_evs = True
 
@@ -86,7 +84,7 @@ if int_end == '':
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
 events_df[event_endtime_column] = events_df[event_timestamp_column].apply(lambda x: pd.to_datetime\
-                                                (np.random.randint(x.value//10**9, x.value//10**9 + 2592000), unit='s', utc=True))
+                                        (np.random.randint(x.value//10**9, x.value//10**9 + 2592000), unit='s', utc=True))
 #update int_end with test endtime max
 int_end = events_df[event_endtime_column].max()
 atomic_evs = False
@@ -99,16 +97,15 @@ time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
 #get a cross product of objects and events df with the time intervals
 #ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
-#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, endtime)
+#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
 
 #get list of events and objects assigned to a time interval 
 #if assign_mech = overlap then we get duplicate events/objects
 #if assign_mech = contains then a lot of events/objects are usually discarded
 #if assign_mech = starting or assign_mech = ending then we get the same number of events/objects as in the original ocel
 #atomic events remain unaffected by assign_mech and are neither duplicated nor discarded.
-events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_id_column,\
-                                           event_timestamp_column, event_endtime_column, atomic_evs)
-objects_to_time_df = get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism, object_id_column)
+events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
+objects_to_time_df = get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism)
 
 #get all properties of the event perspective
 ep1_dict = ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate)

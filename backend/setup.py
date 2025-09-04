@@ -29,7 +29,7 @@ def get_event_to_object_relations_df(ocel):
 
 #if non-atomic events exist in the log, then fill in endtimes for any possible atomic events 
 # in the log (those with null/empty values in endtine column) with their starting time.
-def adjust_events_end_time(events_df, event_timestamp_column, event_endtime_column):
+def adjust_events_end_time(events_df, event_endtime_column, event_timestamp_column = 'ocel:timestamp'):
     #replaces all null and empty values with pd.NaT
     events_df[event_endtime_column] = pd.to_datetime(events_df[event_endtime_column])
     #replaces all pd.NaT values with value in ocel:timestamp column
@@ -103,9 +103,9 @@ def get_event_object_count_df_map(ocel, event_types_to_db_table_map):
 
 # get all existing combinations of event types and object types in the ocel
 # returns an array of  lists where each list is a combination => [object type, event type] that occurs in the log
-def get_event_object_combinations(ocel, event_type_column, object_type_column):
-    event_object_combinations = pm4py.ocel_objects_interactions_summary(ocel)[[event_type_column, object_type_column]].drop_duplicates() \
-    .values
+def get_event_object_combinations(ocel, event_type_column='ocel:eid', object_type_column='ocel:oid'):
+    event_object_combinations = pm4py.ocel_objects_interactions_summary(ocel)[[event_type_column, object_type_column]]\
+                                .drop_duplicates().values
     return event_object_combinations
 
 #get list of time intervals according to the specified time interval and sampling rate
@@ -126,27 +126,32 @@ def get_time_intervals(start_time, end_time, sampling_rate):
     return time_intervals
 
 #a cross join of time intervals_df and objects_df
-def get_time_intervals_cross_objects_df(objects_df, time_intervals, object_id_column):
+def get_time_intervals_cross_objects_df(objects_df, time_intervals, object_id_column='ocel:oid'):
     
     #Create a dataframe containing the time interval range
     time_interval_df = pd.DataFrame(time_intervals, columns = ['time_interval'])
 
     #get a cross product of relevant columns of the log with the time interval df
-    objects_df = objects_df[[object_id_column,'lifecycle_start', 'lifecycle_end']].sort_values(by=['lifecycle_start','lifecycle_end'])
+    objects_df = objects_df[[object_id_column,'lifecycle_start', 'lifecycle_end']]\
+                .sort_values(by=['lifecycle_start','lifecycle_end'])
     cross_df = objects_df.merge(time_interval_df, how='cross')
     return cross_df
 
 #a cross join of time intervals_df and events_df
-def get_time_intervals_cross_events_df(events_df, time_intervals, event_id_column, event_timestamp_column, event_endtime_column):
+def get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column, event_id_column='ocel:eid', \
+                                       event_timestamp_column='ocel:timestamp'):
     #Create a dataframe containing the time interval range
     time_interval_df = pd.DataFrame(time_intervals, columns = ['time_interval'])
 
     #get a cross product of relevant columns of the log with the time interval df
-    events_df = events_df[[event_id_column, event_timestamp_column, event_endtime_column]].sort_values(by=[event_timestamp_column, event_endtime_column])
+    events_df = events_df[[event_id_column, event_timestamp_column, event_endtime_column]]\
+                .sort_values(by=[event_timestamp_column, event_endtime_column])
     cross_df = events_df.merge(time_interval_df, how='cross')
     return cross_df
 
-def update_object_lifecycle_end_for_non_atomic_events(objects_df,event_to_object_relations_df, events_df, event_id_column, object_id_column, event_endtime_column):
+def update_object_lifecycle_end_for_non_atomic_events(objects_df,event_to_object_relations_df, events_df,\
+                                                    event_endtime_column, event_id_column='ocel:eid',\
+                                                    object_id_column='ocel:oid'):
     #get all unique object-to-relations
     e2o_df = event_to_object_relations_df[[object_id_column, event_id_column]].drop_duplicates()
     #get endtimes for all related events
@@ -161,8 +166,9 @@ def update_object_lifecycle_end_for_non_atomic_events(objects_df,event_to_object
     return objects_df
 
 #returns a dataframe with rows for only those objects that are contained in some interval
-def get_contained_objects(ti_cross_objs_df, object_id_column):
-    #Match object lifecycles with time intervals to check containment. Containment is an interval is left open and right closed.
+def get_contained_objects(ti_cross_objs_df, object_id_column='ocel:oid'):
+    #Match object lifecycles with time intervals to check containment. 
+    #Containment is an interval is left open and right closed.
     ti_cross_objs_df['count'] = ti_cross_objs_df.apply(lambda x: 1 if (x['lifecycle_start'] > x['time_interval'][0]) \
                                                        and (x['lifecycle_end'] <= x['time_interval'][1]) else None, axis=1)
     #Drop all rows where containment in an interval is not found
@@ -173,7 +179,7 @@ def get_contained_objects(ti_cross_objs_df, object_id_column):
     return ti_cross_objs_df
 
 #returns a dataframe with rows for each time an object overlaps with some interval
-def get_overlapping_objects(ti_cross_objs_df, object_id_column):
+def get_overlapping_objects(ti_cross_objs_df, object_id_column='ocel:oid'):
     #Match object lifecycles with time intervals to check overlap. 
     #An object must overlap with atleast one interval and may overlap with more than one interval.
     ti_cross_objs_df['count'] = ti_cross_objs_df.apply(lambda x: 1 if (x['lifecycle_start'] <= x['time_interval'][1]) \
@@ -190,10 +196,12 @@ def get_overlapping_objects(ti_cross_objs_df, object_id_column):
     return ti_cross_objs_df
 
 #returns a dataframe with rows for only those events that are contained in some interval
-def get_contained_events(ti_cross_evs_df, event_id_column, event_timestamp_column, event_endtime_column):
-    #Match event start and end with time intervals to check containment. The intervals are treated as left open and right closed.
+def get_contained_events(ti_cross_evs_df, event_endtime_column, event_id_column='ocel:eid',\
+                          event_timestamp_column='ocel:timestamp'):
+    #Match event start and end with time intervals to check containment. 
+    # The intervals are treated as left open and right closed.
     ti_cross_evs_df['count'] = ti_cross_evs_df.apply(lambda x: 1 if (x[event_timestamp_column] > x['time_interval'][0]) \
-                                                     and (x[event_endtime_column] <= x['time_interval'][1]) else None, axis=1)
+                                                    and (x[event_endtime_column] <= x['time_interval'][1]) else None, axis=1)
     
     #Drop all rows where containment in an interval is not found
     ti_cross_evs_df = ti_cross_evs_df.dropna(subset=['count'])
@@ -204,11 +212,12 @@ def get_contained_events(ti_cross_evs_df, event_id_column, event_timestamp_colum
     return ti_cross_evs_df
 
 #returns a dataframe with rows for each time an event overlaps with some interval
-def get_overlapping_events(ti_cross_evs_df, event_id_column, event_timestamp_column, event_endtime_column):
+def get_overlapping_events(ti_cross_evs_df, event_endtime_column, event_id_column='ocel:eid',\
+                            event_timestamp_column='ocel:timestamp'):
     #Match event start and end with time intervals to check overlap. An event must overlap with atleast one interval and
     #may overlap with more than one interval.
     ti_cross_evs_df['count'] = ti_cross_evs_df.apply(lambda x: 1 if (x[event_timestamp_column] <= x['time_interval'][1]) \
-                                                     and (x[event_endtime_column] >= x['time_interval'][0]) else None, axis=1)
+                                                    and (x[event_endtime_column] >= x['time_interval'][0]) else None, axis=1)
     
     #Drop all rows where overlap with an interval is not found
     ti_cross_evs_df = ti_cross_evs_df.dropna(subset=['count'])
@@ -224,61 +233,71 @@ def get_overlapping_events(ti_cross_evs_df, event_id_column, event_timestamp_col
 #returns a dataframe with a column for objects and another for a timestamp representing the assigned interval. 
 # The choice of the timestamp is different for each assignment mechanism such that it it suitable for resampling/aggregation
 # at the time series level. 
-def get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism, object_id_column):
-    ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals, object_id_column)
+def get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism, object_id_column='ocel:oid'):
+    
+    ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
 
     if assignment_mechanism == 'starting':
         objs_to_time_df = objects_df[[object_id_column, 'lifecycle_start']]
-        objs_to_time_df = objs_to_time_df.rename(columns={object_id_column : 'ocel_id', 'lifecycle_start': 'assignment_mechanism_time'})
+        objs_to_time_df = objs_to_time_df\
+            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_start': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'ending':
         objs_to_time_df = objects_df[[object_id_column, 'lifecycle_end']]
-        objs_to_time_df = objs_to_time_df.rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
+        objs_to_time_df = objs_to_time_df\
+            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'contains':
-        objs_to_time_df = get_contained_objects(ti_cross_objs_df, object_id_column)
+        objs_to_time_df = get_contained_objects(ti_cross_objs_df)
         objs_to_time_df = objs_to_time_df[[object_id_column, 'lifecycle_end']]
-        objs_to_time_df = objs_to_time_df.rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
+        objs_to_time_df = objs_to_time_df\
+            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'overlaps':
-        objs_to_time_df = get_overlapping_objects(ti_cross_objs_df, object_id_column)
+        objs_to_time_df = get_overlapping_objects(ti_cross_objs_df)
         objs_to_time_df = objs_to_time_df[[object_id_column, 'time_interval_end']]
-        objs_to_time_df = objs_to_time_df.rename(columns={object_id_column : 'ocel_id', 'time_interval_end': 'assignment_mechanism_time'})
+        objs_to_time_df = objs_to_time_df\
+            .rename(columns={object_id_column : 'ocel_id', 'time_interval_end': 'assignment_mechanism_time'})
 
     else:
         raise ValueError('Invalid assignment mechasism selection')
     
     return objs_to_time_df
 
-def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_id_column, event_timestamp_column, \
-                        event_endtime_column, atomic_evs):
+def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs, \
+                        event_id_column='ocel:eid', event_timestamp_column='ocel:timestamp'):
     #if all events are atomic then assignment mechanism has no effect on the assignment of events
     #to time periods/intervals and we can return a dataframe of events and their timestamps
     if atomic_evs:
         evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
-        evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id', event_timestamp_column: 'assignment_mechanism_time'})
+        evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
+                                                         event_timestamp_column: 'assignment_mechanism_time'})
     else:
         #if all events are not atomic then we need to use the respective strategy for assigning
         #events to time periods/intervals as per the selected assignment mechanism
-        ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_id_column, event_timestamp_column, event_endtime_column)
+        ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
 
         if assignment_mechanism == 'starting':
             evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id', event_timestamp_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
+                                                             event_timestamp_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'ending':
             evs_to_time_df = events_df[[event_id_column, event_endtime_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id', event_endtime_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
+                                                             event_endtime_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'contains':
-            evs_to_time_df = get_contained_events(ti_cross_evs_df, event_id_column, event_timestamp_column, event_endtime_column)
+            evs_to_time_df = get_contained_events(ti_cross_evs_df, event_endtime_column)
             evs_to_time_df = evs_to_time_df[[event_id_column, event_endtime_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id', event_endtime_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
+                                                            event_endtime_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'overlaps':
-            evs_to_time_df = get_overlapping_events(ti_cross_evs_df, event_id_column, event_timestamp_column, event_endtime_column)
+            evs_to_time_df = get_overlapping_events(ti_cross_evs_df, event_endtime_column)
             evs_to_time_df = evs_to_time_df[[event_id_column, 'time_interval_end']]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id', 'time_interval_end': 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
+                                                             'time_interval_end': 'assignment_mechanism_time'})
 
         else:
             raise ValueError('Invalid assignment mechasism selection')
