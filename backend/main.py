@@ -83,12 +83,14 @@ if int_end == '':
 #<-----------Remove in prod----------->
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
-events_df[event_endtime_column] = events_df[event_timestamp_column].apply(lambda x: pd.to_datetime\
-                                        (np.random.randint(x.value//10**9, x.value//10**9 + 2592000), unit='s', utc=True))
-#update int_end with test endtime max
+endtimes_days = np.random.randint(0, 30, len(events_df)).astype('timedelta64[D]')
+endtimes_minutes = np.random.randint(0, 300, len(events_df)).astype('timedelta64[m]')
+events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_days + endtimes_minutes
+
+#update int_end with test endtime maximum
 int_end = events_df[event_endtime_column].max()
 atomic_evs = False
-#<------------------------------------>
+#<-----------Remove in prod----------->
 
 #get time intervals given the sampling rate and total interval. The intervals represent the division of the total interval
 #into time intervals of length equal to the sampling rate. Except the first and last time interval which may be smaller
