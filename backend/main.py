@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from pathlib import Path
 from setup import *
 from EP_measurable_properties import *
+from OP_measurable_properties import *
 from dotenv import load_dotenv
 import os
 
@@ -47,8 +48,12 @@ event_types_to_db_table_map = get_event_types_to_db_table_map(ocel_db_engine)
 event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_db_table_map)
 event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
 events_df = get_events_df(ocel)
-objects_df = get_objects_df(ocel)
+objects_summary_df = get_objects_summary_df(ocel)
 event_to_object_relations_df = get_event_to_object_relations_df(ocel)
+event_to_object_relations_df_map = get_event_to_object_type_relations_df_map(event_to_object_relations_df, event_object_combinations)
+object_changes_df = get_object_changes_df(ocel)
+object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df, object_types_to_db_table_map)
+object_interactions_df = get_object_interactions_df(ocel)
 
 
 #check if the specified endtime attribute for events exists. If yes then we assume the presence of 
@@ -59,7 +64,7 @@ if event_endtime_column in events_df.columns:
     events_df = adjust_events_end_time(events_df, event_endtime_column)
     # calculate lifecycle end time for objects to be calculated based on the maximum endtime of all events associated with
     # an object. By default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
-    objects_df = update_object_lifecycle_end_for_non_atomic_events(objects_df, event_to_object_relations_df,\
+    objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
                                                                     events_df, event_endtime_column)
 else:
     atomic_evs = True
@@ -90,6 +95,8 @@ events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_d
 #update int_end with test endtime maximum
 int_end = events_df[event_endtime_column].max()
 atomic_evs = False
+objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
+                                                                    events_df, event_endtime_column)
 #<-----------Remove in prod----------->
 
 #get time intervals given the sampling rate and total interval. The intervals represent the division of the total interval
@@ -98,7 +105,7 @@ atomic_evs = False
 time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
 #get a cross product of objects and events df with the time intervals
-#ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
+#ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
 #ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
 
 #get list of events and objects assigned to a time interval 
@@ -107,7 +114,7 @@ time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 #if assign_mech = starting or assign_mech = ending then we get the same number of events/objects as in the original ocel
 #atomic events remain unaffected by assign_mech and are neither duplicated nor discarded.
 events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
-objects_to_time_df = get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism)
+objects_to_time_df = get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechanism)
 
 #get all properties of the event perspective
 ep1_dict = ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate)
@@ -115,7 +122,22 @@ ep2_dict = ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode,
 ep3_dict = ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
+
 print(ep1_dict)
 print(ep2_dict)
 print(ep3_dict)
 print(ep4_dict)
+
+op1_dict = op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate)
+op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, time_intervals, aggregation_mode, sampling_rate)
+op3_dict = op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
+op4_dict = op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
+op5_dict = op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
+op6_dict = op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate)
+
+print(op1_dict)
+print(op2_dict)
+print(op3_dict)
+print(op4_dict)
+print(op5_dict)
+print(op6_dict)

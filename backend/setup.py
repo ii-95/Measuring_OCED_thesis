@@ -19,13 +19,21 @@ def get_events_df(ocel):
     events_df = ocel.events
     return events_df
 
-def get_objects_df(ocel):
+def get_objects_summary_df(ocel):
     object_df = pm4py.ocel_objects_summary(ocel)
     return object_df
 
 def get_event_to_object_relations_df(ocel):
     event_to_object_relations_df = ocel.relations
     return event_to_object_relations_df
+
+def get_object_changes_df(ocel):
+    object_changes_df = ocel.object_changes
+    return object_changes_df
+
+def get_object_interactions_df(ocel):
+    object_interactions_df = pm4py.ocel.ocel_objects_interactions_summary(ocel)
+    return object_interactions_df
 
 #if non-atomic events exist in the log, then fill in endtimes for any possible atomic events 
 # in the log (those with null/empty values in endtine column) with their starting time.
@@ -100,6 +108,14 @@ def get_event_object_count_df_map(ocel, event_types_to_db_table_map):
         event_object_count_df_map[event_type] = event_df.join(event_object_count_df)
     return event_object_count_df_map
 
+# returns a dictionary mapping each object type to a dataframe containing the rows of 'object_summary_df' for objects
+# of that type
+def get_object_type_summary_df_map(objects_summary_df, object_types_to_db_table_map, object_id_column = 'ocel:oid'):
+    object_type_summary_df_map = {}
+    for object_type, object_type_df in object_types_to_db_table_map.items():
+        object_type_summary_df_map[object_type] = objects_summary_df.merge(object_type_df, left_on=object_id_column, \
+                                                        right_on='ocel_id', how='inner', suffixes=('_2', None))
+    return object_type_summary_df_map
 
 # get all existing combinations of event types and object types in the ocel
 # returns an array of  lists where each list is a combination => [object type, event type] that occurs in the log
@@ -107,6 +123,18 @@ def get_event_object_combinations(ocel, event_type_column='ocel:eid', object_typ
     event_object_combinations = pm4py.ocel_objects_interactions_summary(ocel)[[event_type_column, object_type_column]]\
                                 .drop_duplicates().values
     return event_object_combinations
+
+# returns a dictionary mapping each combination of an event type and object type (that exists in the log) to
+# a dataframe containing rows of 'event_object_relations_df' i.e. pm4py.ocel.relations df where ocel:type is equal to
+# the specified object type and ocel:activity is equal to specified event type 
+def get_event_to_object_type_relations_df_map(event_to_object_relations_df, event_object_combinations):
+    event_to_object_relations_df_map = {}
+    for (event_type, object_type) in event_object_combinations:
+        event_to_object_relations_df_map[((event_type, object_type))] = event_to_object_relations_df[
+                                                                (event_to_object_relations_df['ocel:type']==object_type) \
+                                                            & (event_to_object_relations_df['ocel:activity'] == event_type)]
+    return event_to_object_relations_df_map
+
 
 #get list of time intervals according to the specified time interval and sampling rate
 def get_time_intervals(start_time, end_time, sampling_rate):
@@ -121,16 +149,16 @@ def get_time_intervals(start_time, end_time, sampling_rate):
     time_intervals = pd.IntervalIndex(time_intervals)
     return time_intervals
 
-#a cross join of time intervals_df and objects_df
-def get_time_intervals_cross_objects_df(objects_df, time_intervals, object_id_column='ocel:oid'):
+#a cross join of time intervals_df and objects_summary_df
+def get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals, object_id_column='ocel:oid'):
     
     #Create a dataframe containing the time interval range
     time_interval_df = pd.DataFrame(data = {'time_interval_left' : time_intervals.left, 'time_interval_right': time_intervals.right})
 
     #get a cross product of relevant columns of the log with the time interval df
-    objects_df = objects_df[[object_id_column,'lifecycle_start', 'lifecycle_end']]\
+    objects_summary_df = objects_summary_df[[object_id_column,'lifecycle_start', 'lifecycle_end']]\
                 .sort_values(by=['lifecycle_start','lifecycle_end'])
-    cross_df = objects_df.merge(time_interval_df, how='cross')
+    cross_df = objects_summary_df.merge(time_interval_df, how='cross')
     return cross_df
 
 #a cross join of time intervals_df and events_df
@@ -145,7 +173,7 @@ def get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_
     cross_df = events_df.merge(time_interval_df, how='cross')
     return cross_df
 
-def update_object_lifecycle_end_for_non_atomic_events(objects_df,event_to_object_relations_df, events_df,\
+def update_object_lifecycle_end_for_non_atomic_events(objects_summary_df,event_to_object_relations_df, events_df,\
                                                     event_endtime_column, event_id_column='ocel:eid',\
                                                     object_id_column='ocel:oid'):
     #get all unique object-to-relations
@@ -155,11 +183,16 @@ def update_object_lifecycle_end_for_non_atomic_events(objects_df,event_to_object
     #get maximum end time for each object. This is the lifecycle end time.
     object_lifecycle_end_df = e2o_df[[object_id_column, event_endtime_column]].groupby(object_id_column).max()
     object_lifecycle_end_df = object_lifecycle_end_df.rename\
-                                (columns={event_id_column:'lifecycle_end'})
-    objects_df = objects_df.drop(columns=['lifecycle_end'])
-    objects_df = object_lifecycle_end_df.merge(objects_df, on= object_id_column)
-    objects_df = update_object_lifecycle_end_for_non_atomic_events(objects_df)
-    return objects_df
+                                (columns={event_endtime_column:'lifecycle_end'})
+    objects_summary_df = objects_summary_df.drop(columns=['lifecycle_end'])
+    objects_summary_df = object_lifecycle_end_df.merge(objects_summary_df, on= object_id_column)
+    objects_summary_df = update_object_lifecycle_duration_for_non_atomic_events(objects_summary_df)
+    return objects_summary_df
+
+def update_object_lifecycle_duration_for_non_atomic_events(objects_summary_df):
+    objects_summary_df['lifecycle_duration'] = objects_summary_df['lifecycle_end'] - objects_summary_df['lifecycle_start']
+    objects_summary_df['lifecycle_duration'] = objects_summary_df['lifecycle_duration'].dt.total_seconds()
+    return objects_summary_df
 
 #returns a dataframe with rows for only those objects that are contained in some interval
 def get_contained_objects(ti_cross_objs_df, object_id_column='ocel:oid'):
@@ -240,17 +273,17 @@ def get_overlapping_events(ti_cross_evs_df, event_endtime_column, event_id_colum
 #returns a dataframe with a column for objects and another for a timestamp representing the assigned interval. 
 # The choice of the timestamp is different for each assignment mechanism such that it it suitable for resampling/aggregation
 # at the time series level. 
-def get_objects_to_time_df(objects_df, time_intervals, assignment_mechanism, object_id_column='ocel:oid'):
+def get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechanism, object_id_column='ocel:oid'):
     
-    ti_cross_objs_df = get_time_intervals_cross_objects_df(objects_df, time_intervals)
+    ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
 
     if assignment_mechanism == 'starting':
-        objs_to_time_df = objects_df[[object_id_column, 'lifecycle_start']]
+        objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_start']]
         objs_to_time_df = objs_to_time_df\
             .rename(columns={object_id_column : 'ocel_id', 'lifecycle_start': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'ending':
-        objs_to_time_df = objects_df[[object_id_column, 'lifecycle_end']]
+        objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_end']]
         objs_to_time_df = objs_to_time_df\
             .rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
 
