@@ -8,6 +8,9 @@ from EP_measurable_properties import *
 from OP_measurable_properties import *
 from dotenv import load_dotenv
 import os
+from sktime.utils.plotting import plot_series
+import matplotlib.pyplot as plt
+import math
 
 pd.options.mode.copy_on_write = True
 
@@ -88,7 +91,7 @@ if int_end == '':
 #<-----------Remove in prod----------->
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
-endtimes_days = np.random.randint(0, 30, len(events_df)).astype('timedelta64[D]')
+""" endtimes_days = np.random.randint(0, 30, len(events_df)).astype('timedelta64[D]')
 endtimes_minutes = np.random.randint(0, 300, len(events_df)).astype('timedelta64[m]')
 events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_days + endtimes_minutes
 
@@ -96,7 +99,7 @@ events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_d
 int_end = events_df[event_endtime_column].max()
 atomic_evs = False
 objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
-                                                                    events_df, event_endtime_column)
+                                                                    events_df, event_endtime_column) """
 #<-----------Remove in prod----------->
 
 #get time intervals given the sampling rate and total interval. The intervals represent the division of the total interval
@@ -104,9 +107,6 @@ objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_s
 #if outside the range of the total interval.
 time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
-#get a cross product of objects and events df with the time intervals
-#ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
-#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
 
 #get list of events and objects assigned to a time interval 
 #if assign_mech = overlap then we get duplicate events/objects
@@ -123,11 +123,6 @@ ep3_dict = ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, s
 ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
 
-print(ep1_dict)
-print(ep2_dict)
-print(ep3_dict)
-print(ep4_dict)
-
 op1_dict = op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate)
 op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, time_intervals, aggregation_mode, sampling_rate)
 op3_dict = op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
@@ -135,9 +130,32 @@ op4_dict = op4(event_to_object_relations_df_map, objects_to_time_df, aggregation
 op5_dict = op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op6_dict = op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate)
 
-print(op1_dict)
-print(op2_dict)
-print(op3_dict)
-print(op4_dict)
-print(op5_dict)
-print(op6_dict)
+property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
+                'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
+                'op5': op5_dict, 'op6': op6_dict}
+
+property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute', \
+                    'ep3': 'Number of Objects per Event', \
+                    'ep4': 'Number of Objects of a type per Event' , \
+                    'op1': 'Object Frequency', 'op2': 'Object Attribute', \
+                    'op3': 'Number of Events per Object', \
+                    'op4': 'Number of Events of a Type per Object', \
+                    'op5': 'Lifecycle Duration', \
+                    'op6': 'Number of Object Interactions per Event'}
+
+#process time series and plot
+for property, property_dict in property_dicts_map.items():
+    if property_dict:
+        for non_temporal_parameters, ts in property_dict.items():
+            if not ts.empty:
+                #padding the timeseries on both ends to align with specified intervals.
+                #filling padded intervals as well as interval which had missing values before padding
+                #due to oversampling in case of a large sampling rate (time period).
+                processed_ts = time_intervals.right.to_frame().merge(ts,\
+                            left_index=True, right_index=True, how='left').fillna(0).drop(columns=0)
+                if isinstance(non_temporal_parameters, tuple):
+                    non_temporal_parameters = ', '.join(non_temporal_parameters   )
+                plot_series(processed_ts, title=f'{property_names_dict[property]} for {non_temporal_parameters}')
+                plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
+                plt.savefig(plot_file_path, bbox_inches='tight', dpi = 600)
+                plt.close()

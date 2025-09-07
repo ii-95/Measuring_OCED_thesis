@@ -12,7 +12,7 @@ def ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate):
     # Input: event type, dataframe containing all events of the specified type 
     # (with attributes and timestamps)
     def ep1_iter(event_type, df):
-            ts_id = f'event-frequency_{event_type}'
+            ts_id = event_type
             df[ts_id] = 1
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
@@ -35,7 +35,7 @@ def ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampli
     #Function to produce time series of attribute values for a given attribute and event type
     #Input: event type, event attribute, dataframe containing all events of the specified type along with attribute values
     def ep2_iter(event_type, event_attribute, df):
-        ts_id = f'event-attribute_{event_type}_{event_attribute}'
+        ts_id = f'{event_type}_{event_attribute}'
         attr_df = df[['assignment_mechanism_time', event_attribute]]
         attr_df = attr_df.rename(columns={event_attribute: ts_id})
         attr_df = attr_df.set_index('assignment_mechanism_time')
@@ -50,7 +50,7 @@ def ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampli
     for event_type, event_type_df in event_types_to_db_table_map.items():
         #<-----------Remove in prod----------->
         #dummy attribute for testing
-        event_type_df['test_attribute'] = np.random.randint(1, 100, event_type_df.shape[0])
+        #event_type_df['test_attribute'] = np.random.randint(1, 100, event_type_df.shape[0])
         #<------------------------------------>
         #get all event attributes
         event_attributes = list(set(event_type_df.columns.values) - set(['ocel_id', 'ocel_time']))
@@ -69,7 +69,7 @@ def ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling
     # Input: event type, dataframe containing all events of the specified type and the count of
     # objects of each type for the event
     def ep3_iter(event_type, df):
-            ts_id = f'number-of-objects-per-event_{event_type}'
+            ts_id = f'{event_type}'
 
             #numeric_only option set as True excludes the only non-numeric and hence 
             #non-object-type-frequency column in the dataframe
@@ -97,7 +97,7 @@ def ep4(event_object_combinations, event_object_count_df_map, events_to_time_df,
     # Input: event type, object type, dataframe containing all events of the specified event type 
     # and a count of objects of the specified object type.
     def ep4_iter(event_type, object_type, df):
-            ts_id = f'number-of-objects-of-a-type-per-event_{event_type}_{object_type}'
+            ts_id = f'{event_type}_{object_type}'
             df = df.rename(columns={object_type: ts_id})
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')

@@ -12,7 +12,7 @@ def op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate):
     # Input: object type, dataframe containing all objects of the specified type 
     # (with attributes and timestamps)
     def op1_iter(object_type, df):
-            ts_id = f'object-frequency_{object_type}'
+            ts_id = f'{object_type}'
             df[ts_id] = 1
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
@@ -39,7 +39,7 @@ def op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, tim
     # object type along with timestamps representing the interval during which the change occured 
     # which is the same interval that the associated object is also assigned to i.e. the column 'assignment_mechanism_time'.
     def op2_iter(object_type, object_attribute, df):
-        ts_id = f'object-attribute_{object_type}_{object_attribute}'
+        ts_id = f'{object_type}_{object_attribute}'
         attr_df = df[['assignment_mechanism_time', object_attribute]]
         attr_df = attr_df.rename(columns={object_attribute: ts_id})
         attr_df = attr_df.set_index('assignment_mechanism_time')
@@ -90,7 +90,7 @@ def op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampli
     # Input: object type, dataframe containing all objects of the specified type including the list of
     # events in the lifecycle of that object and timestamps according to the assignment mechanism
     def op3_iter(object_type, df):
-            ts_id = f'number-of-events-per-object_{object_type}'
+            ts_id = f'{object_type}'
             #compute the number of activities in an object's lifecycle
             df[ts_id] = df['activities_lifecycle'].str.len()
             df = df[['assignment_mechanism_time', ts_id]]
@@ -124,7 +124,7 @@ def op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, 
     # Input: object type, dataframe containing all objects of the specified type along with the count of related events
     # of the specified type and timestamps according to the assignment mechanism
     def op4_iter(object_type, event_type, df):
-            ts_id = f'number-of-events-of-a-type-per-object_{object_type}_{event_type}'
+            ts_id = f'{object_type}_{event_type}'
             df = df.rename(columns={'event_count': ts_id})
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
@@ -159,7 +159,7 @@ def op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampli
     # Input: object type, dataframe containing all objects of the specified type along with their
     # lifecycle duration and timestamps according to the assignment mechanism
     def op5_iter(object_type, df):
-            ts_id = f'object_lifecycle_duration_in_seconds_{object_type}'
+            ts_id = f'{object_type}'
             df = df.rename(columns={'lifecycle_duration': ts_id})
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
@@ -189,7 +189,7 @@ def op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_ra
     # Input: a combination of two object types, dataframe containing events and count of object interactions for each event
     # between objects of the two specified types along timestamps of events according to the assignment mechanism.
     def op6_iter(object_to_object_combination, df):
-            ts_id = f'number_of_object_interactions_via_events_{object_to_object_combination[0]}_{object_to_object_combination[1]}'
+            ts_id = f'{object_to_object_combination[0]}_{object_to_object_combination[1]}'
             df = df.rename(columns={'object_type_pairs': ts_id})
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
