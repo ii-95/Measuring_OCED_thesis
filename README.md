@@ -3,24 +3,27 @@ This repository contains the implementation of the Master's Thesis 'Measuring OC
 
 The project requires python and can be run by following the steps below:
 
-1) Install required packages contained within requirements.txt using tool of choice.
+1) Install required packages contained within /backend/requirements.txt using tool of choice.
 
 2) Configure user inputs in /inputs.env. Fields which require you to choose from options have the options mentioned above them in the inputs.env file.
 
-3) Run the script backend/main.py
+3) Run the script /backend/main.py
 
-The output are time series plots that can be found in /backend/assets/plots
+Furthermore, please note the following:
 
-The plots for the default config as found in inputs.env are already present in the the plots directory. If you want to try a different configuration then follow the steps above.
+- The output is a bunch of time series plots that can be found in /backend/assets/plots
 
-The OCEL used for the project currently needs to be provided in both sqlite and json format. This will be resolved eventually.
+- The plots for the default config (ocel: https://zenodo.org/records/8428112) as found in inputs.env are already present in the the plots directory. If you want to try a different configuration then follow the steps above.
 
-The project supports non-atomic events by specifying an event attribute that contains
-the end time of events. If your provided log does not contain any such attribute and you wish to test this feature please uncomment lines 94-102 from backend/main.py.
+- The OCEL used for the project currently needs to be provided in both sqlite and json format. This will be resolved eventually.
 
-Property functions EP2 and OP2 only create time series for numerical attributes of events
-and objects, respectively.
+- The processing of time series before visualization includes zero padding on either side of the series to co-incide with the interval provided in inputs.env. Any other intervals with missing values are also replaced with 0. This can be replaced with a nicer methodology but I wish to discuss this before implementing anything further.
 
-The log in the default config doesn't contain any numerical event attribute. If you wish to test EP2 then please uncomment line 53 in backend/EP_measurable_properties.py
+- The project supports non-atomic events by specifying an event attribute that contains
+the end time of events. If your provided log does not contain any such attribute and you wish to test this feature please uncomment lines 94-102 from backend/main.py. Same applies for the log provided in the default config that does not contain any such attribute.
 
-The project is in a working state. The front end is yet to built. The provided plotting functionality is only for interim testing and not a reflection of what the front UI will look like (which will hopefully be much nicer).
+- Property functions EP2 and OP2 only create time series for numerical attributes of events and objects, respectively.
+
+- The log in the default config doesn't contain any numerical event attribute. If you wish to test EP2 then please uncomment line 53 in backend/EP_measurable_properties.py. The log however does contain a single numerical object attribute 'Price' for object type 'Product'. However this only yields any values if the assignment mechanism is set as 'overlaps' since it is the only asssignment mechanism where the the time period of attribute assignment and object assignment co-incides. 
+
+- The project is in the development phase. The front end is yet to be built. The provided plotting functionality is only for interim testing and not a reflection of what the front UI will look like (which will hopefully be much nicer).

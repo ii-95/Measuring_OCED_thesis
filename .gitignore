@@ -1,0 +1,13 @@
+backend/testing.ipynb
+.vscode/settings.json
+backend/order-management-2.sqlite
+backend/inputs.env
+backend/ocel2-p2p.sqlite
+backend/ocel2-p2p.json
+backend/order-management.json
+backend/order-management.sqlite
+backend/post_ocel_inventory_management.xml
+backend/post_ocel_inventory_management_2.sqlite
+backend/post_ocel_inventory_management_3.sqlite
+backend/post_ocel_inventory_management.sqlite
+*.pyc
