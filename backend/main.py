@@ -153,10 +153,6 @@ for property, property_dict in property_dicts_map.items():
                 #due to oversampling in case of a large sampling rate (time period).
                 processed_ts = time_intervals.right.to_frame().merge(ts,\
                             left_index=True, right_index=True, how='left').fillna(0).drop(columns=0)
-                #if the length of the last interval is less than sampling rate then copy it's value
-                #from the original ts as it will not be included in the merge
-                if ts.index[-1] > processed_ts.index[-1]:
-                    processed_ts.iloc[-1] = ts.iloc[-1]
                 if isinstance(non_temporal_parameters, tuple):
                     non_temporal_parameters = ', '.join(non_temporal_parameters   )
                 plot_series(processed_ts, title=f'{property_names_dict[property]} for {non_temporal_parameters}')
