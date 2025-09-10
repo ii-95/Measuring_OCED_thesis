@@ -39,7 +39,7 @@ def get_object_interactions_df(ocel):
 # in the log (those with null/empty values in endtine column) with their starting time.
 def adjust_events_end_time(events_df, event_endtime_column, event_timestamp_column = 'ocel:timestamp'):
     #replaces all null and empty values with pd.NaT
-    events_df[event_endtime_column] = pd.to_datetime(events_df[event_endtime_column])
+    events_df[event_endtime_column] = pd.to_datetime(events_df[event_endtime_column], utc = True)
     #replaces all pd.NaT values with value in ocel:timestamp column
     events_df.loc[events_df[event_endtime_column].isnull(), event_endtime_column] = events_df[event_timestamp_column]
     return events_df
@@ -64,7 +64,7 @@ def get_event_types_to_db_table_map(ocel_db_engine):
     event_types_to_db_table_map = {}
     for key,value in event_types_to_db_table_name_map.items():
         df = pd.read_sql(f"SELECT * FROM {value}", con=ocel_db_engine)
-        df['ocel_time'] = pd.to_datetime(df['ocel_time'])
+        df['ocel_time'] = pd.to_datetime(df['ocel_time'], utc= True)
         event_types_to_db_table_map[key] = df
 
     return event_types_to_db_table_map
@@ -88,7 +88,7 @@ def get_object_types_to_db_table_map(ocel_db_engine):
 
     for key,value in object_types_to_db_table_name_map.items():
         df = pd.read_sql(f"SELECT * FROM {value}", con=ocel_db_engine)
-        df['ocel_time'] = pd.to_datetime(df['ocel_time'])
+        df['ocel_time'] = pd.to_datetime(df['ocel_time'], utc=True)
         object_types_to_db_table_map[key] = df
 
     return object_types_to_db_table_map

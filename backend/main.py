@@ -124,7 +124,7 @@ ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_t
 
 
 op1_dict = op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate)
-op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, time_intervals, aggregation_mode, sampling_rate)
+op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op3_dict = op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op4_dict = op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op5_dict = op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
@@ -134,10 +134,10 @@ property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': 
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
                 'op5': op5_dict, 'op6': op6_dict}
 
-property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute', \
+property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute Value', \
                     'ep3': 'Number of Objects per Event', \
                     'ep4': 'Number of Objects of a type per Event' , \
-                    'op1': 'Object Frequency', 'op2': 'Object Attribute', \
+                    'op1': 'Object Frequency', 'op2': 'Object Attribute Value', \
                     'op3': 'Number of Events per Object', \
                     'op4': 'Number of Events of a Type per Object', \
                     'op5': 'Lifecycle Duration', \
@@ -159,7 +159,7 @@ for property, property_dict in property_dicts_map.items():
                     processed_ts.iloc[-1] = ts.iloc[-1]
                 if isinstance(non_temporal_parameters, tuple):
                     non_temporal_parameters = ', '.join(non_temporal_parameters   )
-                plot_series(processed_ts, title=f'{property_names_dict[property]} for {non_temporal_parameters}')
+                plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs: ({non_temporal_parameters}) with assignment_mechanism = {assignment_mechanism}')
                 plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
                 plt.savefig(plot_file_path, bbox_inches='tight', dpi = 600)
                 plt.close()

@@ -24,20 +24,19 @@ def op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate):
     # Map object type to time series in dictionary 'op1_dict'
     op1_dict = {}
     for object_type, object_type_df in object_types_to_db_table_map.items():
-        df = objects_to_time_df.merge(object_type_df, on='ocel_id', how='inner', suffixes=('_2', None))
+        df = objects_to_time_df.merge(object_type_df['ocel_id'], on='ocel_id', how='right', suffixes=('_2', None))\
+            .drop_duplicates()
         op1_dict[object_type] = op1_iter(object_type, df)
     return op1_dict
 
-def op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, time_intervals, aggregation_mode,\
-         sampling_rate, object_id_column='ocel:oid', object_type_column='ocel:type', timestamp_column='ocel:timestamp', 
-         changed_field_column='ocel:field'):
+def op2(object_types_to_db_table_map, objects_to_time_df, aggregation_mode, sampling_rate, \
+        object_id_column='ocel:oid', object_type_column='ocel:type', timestamp_column='ocel:timestamp', 
+        changed_field_column='ocel:field'):
 
-    # Function to produce time series of changes in attribute values for a given attribute and object type
-    # Note that the original values i.e. where ocel_changed_field or ocel:field is null are not displayed 
-    # in the time series as their timestamps. Only the changes are displayed.
-    # Input: object type, object attribute, dataframe containing all changes in the specified attribute of the specified
-    # object type along with timestamps representing the interval during which the change occured 
-    # which is the same interval that the associated object is also assigned to i.e. the column 'assignment_mechanism_time'.
+    # Function to produce time series of attribute values for a given attribute and object type
+    # Input: object type, object attribute, dataframe containing value of the attribute at the end of each interval
+    # along with timestamps representing the interval.
+
     def op2_iter(object_type, object_attribute, df):
         ts_id = f'{object_type}_{object_attribute}'
         attr_df = df[['assignment_mechanism_time', object_attribute]]
@@ -45,7 +44,6 @@ def op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, tim
         attr_df = attr_df.set_index('assignment_mechanism_time')
         ts = attr_df[ts_id]
         ts = agg(ts, aggregation_mode, sampling_rate)
-                
         return ts
 
     op2_dict = {}
@@ -56,31 +54,21 @@ def op2(object_types_to_db_table_map, objects_to_time_df, object_changes_df, tim
         for object_attribute in object_attributes:
             #check if attribute is numerical
             if is_any_real_numeric_dtype(object_type_df[object_attribute]):
-                #get all changes in attribute for any object of the type
-                ot_changes_df = object_changes_df[(object_changes_df[object_type_column] == object_type)\
-                                                   & (object_changes_df[changed_field_column] == object_attribute)]
-                #check if attribute has any changes for any object of the type
-                if not ot_changes_df.empty:
-                    #get timestamps that represent interval/time-period for objects i.e. 'objects_to_time_df' and 
-                    #merge with attribute changes based on the object id
-                    ot_changes_df_with_time = objects_to_time_df.merge(ot_changes_df, left_on='ocel_id',\
-                                                         right_on= object_id_column, how='inner', suffixes=('_2', None))
-                    #get all time interval boundaries
-                    time_interval_df = pd.DataFrame(data = {'time_interval_left' : time_intervals.left,\
-                                                             'time_interval_right': time_intervals.right})
-                    cross_df = ot_changes_df_with_time.merge(time_interval_df, how='cross')
-                    #get all rows where the attribute changes and object to time period assignments align
-                    filtered_df = cross_df[(cross_df['assignment_mechanism_time'] > cross_df['time_interval_left']) \
-                            & (cross_df['assignment_mechanism_time'] <= cross_df['time_interval_right']) \
-                            & (cross_df[timestamp_column] > cross_df['time_interval_left'])\
-                            & (cross_df[timestamp_column] <= cross_df['time_interval_right']) ]
-                    #Get the latest value assignment of the attribute in each of these intervals 
-                    interval_contained_changes_df=filtered_df.sort_values(timestamp_column)\
-                        .groupby(['ocel_id','time_interval_left','time_interval_right'], sort=False).tail(1)
+                #get rows which contain attribute's initial value or attribute changes
+                attr_df = object_type_df[object_type_df['ocel_changed_field'].isin([None, object_attribute])]
+                #check if attribute has values assigned
+                if not attr_df.empty:
+                    #merge with object's time assignment df
+                    attr_df = attr_df.merge(objects_to_time_df, on='ocel_id', how='inner')
+                    #only keep those rows where attribute to object assignment timestamp is less than object to time period
+                    #assignment timestamp
+                    attr_df = attr_df[attr_df['ocel_time'] < attr_df['assignment_mechanism_time']]
+                    #get latest value of attribute for each object at end of each time interval
+                    attr_df = attr_df.groupby(['ocel_id', 'assignment_mechanism_time']).max('ocel_time')
+                    attr_df = attr_df.reset_index()
                     # Call function 'op2_iter' for each combination of an object type and one of it's numerical attributes
-                    # to produce a dictionary that maps the time series of changes in the attribute values. 
-                    op2_dict[(object_type, object_attribute)] = op2_iter(object_type, object_attribute,\
-                                                                          interval_contained_changes_df)
+                    # to produce a dictionary that maps the time series attribute values. 
+                    op2_dict[(object_type, object_attribute)] = op2_iter(object_type, object_attribute, attr_df)
     return op2_dict
 
 def op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate):
