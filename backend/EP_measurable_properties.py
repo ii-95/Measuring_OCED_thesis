@@ -6,7 +6,7 @@ from pandas.api.types import is_any_real_numeric_dtype
 from setup import agg
 
 
-def ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate):
+def ep1(event_types_to_df_map, events_to_time_df, sampling_rate, event_id_column = 'ocel:eid'):
     
     # Function to produce time series of count/frequency of events for a given event type
     # Input: event type, dataframe containing all events of the specified type 
@@ -23,14 +23,15 @@ def ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate):
     # Call function 'ep1_iter' for each event type to produce respective count/frequency timeseries.
     # Map event type to time series in dictionary 'ep1_dict'
     ep1_dict = {}
-    for event_type, event_type_df in event_types_to_db_table_map.items():
+    for event_type, event_type_df in event_types_to_df_map.items():
         #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
         #merge with event type table based on the event id
-        df = events_to_time_df.merge(event_type_df, on='ocel_id', how='inner', suffixes=('_2', None))
+        df = events_to_time_df.merge(event_type_df, on=event_id_column, how='inner', suffixes=('_2', None))
         ep1_dict[event_type] = ep1_iter(event_type, df)
     return ep1_dict
 
-def ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampling_rate):
+def ep2(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, atomic_evs, event_endtime_column,\
+         event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp'):
 
     #Function to produce time series of attribute values for a given attribute and event type
     #Input: event type, event attribute, dataframe containing all events of the specified type along with attribute values
@@ -47,23 +48,27 @@ def ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampli
     # Call function 'ep2_iter' for each combination of an event type and one of it's numerical attributes
     # to produce a dictionary that maps the time series of attribute values.  
     ep2_dict = {}
-    for event_type, event_type_df in event_types_to_db_table_map.items():
+    for event_type, event_type_df in event_types_to_df_map.items():
         #<-----------Remove in prod----------->
         #dummy attribute for testing
         #event_type_df['test_attribute'] = np.random.randint(1, 100, event_type_df.shape[0])
         #<------------------------------------>
         #get all event attributes
-        event_attributes = list(set(event_type_df.columns.values) - set(['ocel_id', 'ocel_time']))
+        if atomic_evs:
+            event_attributes = list(set(event_type_df.columns.values) \
+                                    - set([event_id_column, event_timestamp_column]))
+        else:
+            event_attributes = list(set(event_type_df.columns.values) \
+                                    - set([event_id_column, event_timestamp_column, event_endtime_column]))
+            
         for event_attribute in event_attributes:
-            #check if event attribute is numerical
-            if is_any_real_numeric_dtype(event_type_df[event_attribute]):
-                #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
-                #merge with event type table based on the event id
-                df = events_to_time_df.merge(event_type_df, on='ocel_id', how='inner', suffixes=('_2', None))
-                ep2_dict[(event_type, event_attribute)] = ep2_iter(event_type, event_attribute, df)
+            #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
+            #merge with event type table based on the event id
+            df = events_to_time_df.merge(event_type_df, on=event_id_column, how='inner', suffixes=('_2', None))
+            ep2_dict[(event_type, event_attribute)] = ep2_iter(event_type, event_attribute, df)
     return ep2_dict
 
-def ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate):
+def ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_id_column = 'ocel:eid'):
 
     # Function to produce time series of (total) number of objects per event of a given event type
     # Input: event type, dataframe containing all events of the specified type and the count of
@@ -87,11 +92,12 @@ def ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling
     for event_type, event_object_count_df in event_object_count_df_map.items():
         #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
         #merge with table containing the number of objects of each object type per event i.e. event_object_count_df
-        df = events_to_time_df.merge(event_object_count_df, on='ocel_id', how='inner', suffixes=('_2', None))
+        df = events_to_time_df.merge(event_object_count_df, on = event_id_column, how='inner', suffixes=('_2', None))
         ep3_dict[event_type] = ep3_iter(event_type, df)
     return ep3_dict
 
-def ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate):
+def ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate,\
+        event_id_column = 'ocel:eid'):
 
     # Function to produce time series of number of objects of a given object type per event of a given event type.
     # Input: event type, object type, dataframe containing all events of the specified event type 
@@ -110,9 +116,9 @@ def ep4(event_object_combinations, event_object_count_df_map, events_to_time_df,
     # Map combination of event type and object type to a time series in dictionary 'ep4_dict'.
     ep4_dict = {}
     for (event_type, object_type) in event_object_combinations:
-        event_object_count_df = event_object_count_df_map[event_type][[object_type]]
+        event_object_count_df = event_object_count_df_map[event_type][[event_id_column, object_type]]
         #get timestamps that represent interval/time-period assignments for events i.e. 'events_to_time_df' and 
         #merge with table containing the number of objects of each type per event i.e. event_object_count_df
-        df = events_to_time_df.merge(event_object_count_df, on='ocel_id', how='inner', suffixes=('_2', None))
+        df = events_to_time_df.merge(event_object_count_df, on = event_id_column, how='inner', suffixes=('_2', None))
         ep4_dict[(event_type,object_type)] = ep4_iter(event_type, object_type, df)
     return ep4_dict

@@ -33,9 +33,16 @@ int_end = os.getenv('time_series_interval_end')
 
 #We use use the ocel as a pm4py object 'ocel' for data processing and analysis.
 # get ocel as a pm4py object 
-ocel = pm4py.read_ocel2_json(f'{path_to_ocel}.json')
-#We also use the ocel as a database in cases where it more effecient or convenient to use the tables
-ocel_db_engine = create_engine(f'sqlite:///{path_to_ocel}.sqlite')
+format = path_to_ocel.suffix
+
+if format == '.json':
+    ocel = pm4py.read_ocel2_json(str(path_to_ocel))
+elif format == '.sqlite':
+    ocel = pm4py.read_ocel2_sqlite(str(path_to_ocel))
+elif format == '.xml':
+    ocel = pm4py.read_ocel2_xml(str(path_to_ocel))
+else:
+    raise TypeError('Invalid format')
 
 #set pm4py ocel column names
 event_id_column = ocel.event_id_column
@@ -46,22 +53,25 @@ object_type_column = ocel.object_type_column
 changed_field_column = ocel.changed_field
 qualifier_column = ocel.qualifier
 
-#setup essential tables(dataframes)
-object_types_to_db_table_map = get_object_types_to_db_table_map(ocel_db_engine)
-event_types_to_db_table_map = get_event_types_to_db_table_map(ocel_db_engine)
-event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_db_table_map)
-event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
+#setup essential tables(dataframes) and variables
 events_df = get_events_df(ocel)
+
+event_types = list(events_df[event_type_column].unique())
+object_types = pm4py.ocel.ocel_get_object_types(ocel)
+
+event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
+event_types = list(events_df[event_type_column].unique())
 objects_summary_df = get_objects_summary_df(ocel)
 event_to_object_relations_df = get_event_to_object_relations_df(ocel)
 event_to_object_relations_df_map = get_event_to_object_type_relations_df_map(event_to_object_relations_df, event_object_combinations)
+objects_df = get_objects_df(ocel)
 object_changes_df = get_object_changes_df(ocel)
-object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df, object_types_to_db_table_map)
 object_interactions_df = get_object_interactions_df(ocel)
 
 #get event and object types
-event_types = list(events_df[event_type_column].unique())
+
 object_types = pm4py.ocel.ocel_get_object_types(ocel)
+
 
 #check if the specified endtime attribute for events exists. If yes then we assume the presence of 
 # non-atomic events in the log.
@@ -95,9 +105,9 @@ if int_end == '':
 #<-----------Remove in prod----------->
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
-""" endtimes_days = np.random.randint(0, 30, len(events_df)).astype('timedelta64[D]')
+""" endtimes_hours = np.random.randint(0, 30, len(events_df)).astype('timedelta64[h]')
 endtimes_minutes = np.random.randint(0, 300, len(events_df)).astype('timedelta64[m]')
-events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_days + endtimes_minutes
+events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_hours + endtimes_minutes
 
 #update int_end with test endtime maximum
 int_end = events_df[event_endtime_column].max()
@@ -111,6 +121,9 @@ objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_s
 #if outside the range of the total interval.
 time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
+#get a cross product of objects and events df with the time intervals
+#ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
+#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
 
 #get list of events and objects assigned to a time interval 
 #if assign_mech = overlap then we get duplicate events/objects
@@ -120,20 +133,27 @@ time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
 objects_to_time_df = get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechanism)
 
+
+object_types_to_df_map = get_object_types_to_df_map(objects_df, object_changes_df, object_types)
+event_types_to_df_map = get_event_types_to_df_map(events_df, event_types, atomic_evs, event_endtime_column)
+
+event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_df_map)
+object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df, object_types_to_df_map)
+
 #get preceding events df for performance perspective properties
 preceding_events_df = get_preceding_events_df(event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
 preceding_events_by_object_type_df = get_preceding_events_by_object_type_df\
                                         (event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
 
 #get all properties of the event perspective
-ep1_dict = ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate)
-ep2_dict = ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampling_rate)
+ep1_dict = ep1(event_types_to_df_map, events_to_time_df, sampling_rate)
+ep2_dict = ep2(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, atomic_evs, event_endtime_column)
 ep3_dict = ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
 #get all properties of the object perspective
-op1_dict = op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate)
-op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, aggregation_mode, sampling_rate)
+op1_dict = op1(object_types_to_df_map, objects_to_time_df, sampling_rate)
+op2_dict = op2(object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op3_dict = op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op4_dict = op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op5_dict = op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
@@ -145,7 +165,7 @@ pp2_dict = pp2(preceding_events_df, event_types, events_to_time_df, aggregation_
 if atomic_evs:
     pp3_dict = {}
 else:
-    pp3_dict = pp3(events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
+    pp3_dict = pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
 
 property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
@@ -160,9 +180,9 @@ property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute Value',
                     'op4': 'Number of Events of a Type per Object', \
                     'op5': 'Lifecycle Duration', \
                     'op6': 'Number of Object Interactions per Event', \
-                    'pp1': 'Waiting Time', \
-                    'pp2': 'Synchronization Time', \
-                    'pp3': 'Service Time'}
+                    'pp1': 'Waiting Time (Hours)', \
+                    'pp2': 'Synchronization Time (Hours)', \
+                    'pp3': 'Service Time (Hours)'}
 
 #process time series and plot
 for property, property_dict in property_dicts_map.items():

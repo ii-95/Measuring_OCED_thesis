@@ -26,7 +26,7 @@ def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 
     for event_type in event_types:
         type_wt_df = wt_df[wt_df[event_type_column] == event_type]
-        type_wt_df = type_wt_df.merge(events_to_time_df, left_on = event_id_column, right_on = 'ocel_id', how = 'inner')
+        type_wt_df = type_wt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
         pp1_dict[event_type] = pp1_iter(event_type, type_wt_df)
 
     return pp1_dict
@@ -56,12 +56,12 @@ def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 
     for event_type in event_types:
         type_wt_df = wt_df[wt_df[event_type_column] == event_type]
-        type_wt_df = type_wt_df.merge(events_to_time_df, left_on = event_id_column, right_on = 'ocel_id', how = 'inner')
+        type_wt_df = type_wt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
         pp2_dict[event_type] = pp2_iter(event_type, type_wt_df)
         
     return pp2_dict
 
-def pp3(events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column,\
+def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column,\
         event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp', event_type_column = 'ocel:activity'):
 
     def pp3_iter(event_type, df):
@@ -76,9 +76,8 @@ def pp3(events_df, event_types, events_to_time_df, aggregation_mode, sampling_ra
         return ts
  
     pp3_dict = {}
-    for event_type in event_types:
-        event_type_df = events_df[events_df[event_type_column] == event_type]
+    for event_type, event_type_df in event_types_to_df_map.items():
         event_type_df['service_time'] = event_type_df[event_endtime_column] - event_type_df[event_timestamp_column]
-        df = events_to_time_df.merge(event_type_df, left_on='ocel_id', right_on=event_id_column, how='inner', suffixes=('_2', None))
+        df = events_to_time_df.merge(event_type_df, on=event_id_column, how='inner', suffixes=('_2', None))
         pp3_dict[event_type] = pp3_iter(event_type, df)
     return pp3_dict

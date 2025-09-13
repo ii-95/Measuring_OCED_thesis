@@ -2,6 +2,7 @@ import pm4py
 import pandas as pd
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_any_real_numeric_dtype
 
 
 def agg(series, aggregation_mode, sampling_rate):
@@ -19,13 +20,17 @@ def get_events_df(ocel):
     events_df = ocel.events
     return events_df
 
-def get_objects_summary_df(ocel):
-    object_df = pm4py.ocel_objects_summary(ocel)
-    return object_df
-
 def get_event_to_object_relations_df(ocel):
     event_to_object_relations_df = ocel.relations
     return event_to_object_relations_df
+
+def get_objects_df(ocel):
+    objects_df = ocel.objects
+    return objects_df
+
+def get_objects_summary_df(ocel):
+    object_summary_df = pm4py.ocel_objects_summary(ocel)
+    return object_summary_df
 
 def get_object_changes_df(ocel):
     object_changes_df = ocel.object_changes
@@ -44,77 +49,100 @@ def adjust_events_end_time(events_df, event_endtime_column, event_timestamp_colu
     events_df.loc[events_df[event_endtime_column].isnull(), event_endtime_column] = events_df[event_timestamp_column]
     return events_df
 
-#returns a dictionary that maps each event type to the respective table in the ocel's sql db (converted to dataframe).
-def get_event_types_to_db_table_map(ocel_db_engine):
+#returns a dictionary that maps each event type to a dataframe containing all events of those types along with
+#timestamps and numerical attributes
+def get_event_types_to_df_map(events_df, event_types, atomic_evs, event_endtime_column, event_id_column = 'ocel:eid',\
+                                    event_timestamp_column = 'ocel:timestamp', event_type_column = 'ocel:activity'):
 
-    # read table 'event_map_type' in ocel sql db
-    event_map_type_df = pd.read_sql("SELECT * FROM event_map_type", con=ocel_db_engine)
+    event_types_to_df_map = {}
+    #<-----------Remove in prod----------->
+    #dummy attribute for testing
+    #events_df['test_attribute'] = np.random.randint(1, 100, events_df.shape[0])
+    #<------------------------------------>
+    if atomic_evs:
+        event_attributes = list(set(events_df.columns.values) \
+                                - set([event_id_column, event_timestamp_column, event_type_column]))
+    else:
+        event_attributes = list(set(events_df.columns.values) \
+                                - set([event_id_column, event_timestamp_column, event_type_column, event_endtime_column]))
+    non_numerical_attributes = []
+    for event_attribute in event_attributes:
+        #check if event attribute is not numerical, then add to list of non-numerical attributes
+        if not is_any_real_numeric_dtype(events_df[event_attribute]):
+            non_numerical_attributes.append(event_attribute)
+    #remove all non-numerical attributes
+    if non_numerical_attributes:
+        events_df = events_df.drop(non_numerical_attributes, axis=1)
+    for event_type in event_types:
+        #get rows for events of event_type
+        event_type_df = events_df[events_df[event_type_column] == event_type]
+        #drop attribute columns that don't belong to the event type i.e., null for all events of the type
+        event_type_df = event_type_df.dropna(axis=1, how='all')
+        #remove event type column
+        event_type_df = event_type_df.drop(event_type_column, axis=1)
+        event_types_to_df_map[event_type] = event_type_df
+    return event_types_to_df_map
 
-
-    # append 'event_' to the 'ocel_type_map' column of the 'event_map_type' table (dataframe) in 
-    # ocel to get the actual name table
-    event_map_type_df['ocel_type_map'] = 'event_' + event_map_type_df['ocel_type_map'].astype(str) 
-    # convert the two column dataframe to a dict to use ahead
-    event_types_to_db_table_name_map = dict(zip(event_map_type_df.ocel_type, event_map_type_df.ocel_type_map))
-
-
-    # initilize and populate the dictionary that maps each event type 
-    # to respective table (converted to dataframe) in ocel sql db.
-    # convert the 'ocel_time' column in the event type table to datetime format
-    event_types_to_db_table_map = {}
-    for key,value in event_types_to_db_table_name_map.items():
-        df = pd.read_sql(f"SELECT * FROM {value}", con=ocel_db_engine)
-        df['ocel_time'] = pd.to_datetime(df['ocel_time'], utc= True)
-        event_types_to_db_table_map[key] = df
-
-    return event_types_to_db_table_map
-
-#returns a dictionary that  maps each object type to the respective table in the ocel's sql db.
-def get_object_types_to_db_table_map(ocel_db_engine):
+#returns a dictionary that  maps each object type to a dataframe containing all objects of those types along with
+#timestamps and numerical attributes
+def get_object_types_to_df_map(objects_df, object_changes_df, object_types, object_id_column = 'ocel:oid',\
+                               timestamp_column = 'ocel:timestamp', object_type_column = 'ocel:type',\
+                                changed_field_column = 'ocel:field'):
      
-    # read table 'object_map_type' in ocel sql db
-    object_map_type_df = pd.read_sql("SELECT * FROM object_map_type", con=ocel_db_engine)
+    if '@@cumcount' in object_changes_df.columns:
+        object_changes_df = object_changes_df.drop('@@cumcount', axis = 1)
+        object_changes_df
+    objects_df['ocel:timestamp'] = pd.to_datetime('1970-01-01T00:00:00.000Z')
+    objects_df['ocel:field'] = None
 
-    # append 'object_' to the 'ocel_type_map' column of the 'object_map_type' table (dataframe) in 
-    # ocel to get the actual name table
-    object_map_type_df['ocel_type_map'] = 'object_' + object_map_type_df['ocel_type_map'].astype(str) 
-    # convert the two column dataframe to a dict to use ahead
-    object_types_to_db_table_name_map = dict(zip(object_map_type_df.ocel_type, object_map_type_df.ocel_type_map))
+    objects_df = pd.concat([objects_df,object_changes_df])
 
-    # initilize and populate the dictionary that maps each object type
-    # to it's table (converted to dataframes) in the ocel's sql db
-    # convert the 'ocel_time' column to datetime format
-    object_types_to_db_table_map = {}
-
-    for key,value in object_types_to_db_table_name_map.items():
-        df = pd.read_sql(f"SELECT * FROM {value}", con=ocel_db_engine)
-        df['ocel_time'] = pd.to_datetime(df['ocel_time'], utc=True)
-        object_types_to_db_table_map[key] = df
-
-    return object_types_to_db_table_map
+    object_types_to_df_map = {}
+    
+    object_attributes = list(set(objects_df.columns.values) \
+                            - set([object_id_column, timestamp_column, object_type_column, changed_field_column]))
+    non_numerical_attributes = []
+    for object_attribute in object_attributes:
+        #check if object attribute is not numerical, then add to list of non-numerical attributes
+        if not is_any_real_numeric_dtype(objects_df[object_attribute]):
+            non_numerical_attributes.append(object_attribute)
+    #remove all non-numerical attributes
+    if non_numerical_attributes:
+        objects_df = objects_df.drop(non_numerical_attributes, axis=1)
+    for object_type in object_types:
+        #get rows for objects of object_type
+        object_type_df = objects_df[objects_df[object_type_column] == object_type]
+        #drop attribute columns that don't belong to the object type i.e., null for all objects of the type
+        tmp = object_type_df[object_type_df.columns.difference([changed_field_column])].isna().all()
+        object_type_df = object_type_df.drop(tmp.index[tmp], axis=1)
+        #remove object type column
+        object_type_df = object_type_df.drop(object_type_column, axis=1)
+        object_types_to_df_map[object_type] = object_type_df
+    return object_types_to_df_map
 
 
 
 # returns a dictionary mapping each event type to a dataframe containing the number of objects of each object type 
 # per event of the specified event type
-def get_event_object_count_df_map(ocel, event_types_to_db_table_map):
+def get_event_object_count_df_map(ocel, event_types_to_df_map, event_id_column = 'ocel:eid',\
+                                    event_timestamp_column = 'ocel:timestamp'):
     event_object_count_df = pd.DataFrame.from_dict(pm4py.ocel_objects_ot_count(ocel)).transpose()
+    event_object_count_df.index.name = event_id_column
+    event_object_count_df = event_object_count_df.reset_index()
     event_object_count_df = event_object_count_df.replace(np.nan, 0)
     event_object_count_df_map = {}
 
-    for event_type, event_type_df in event_types_to_db_table_map.items():
-        event_df = event_type_df[['ocel_id', 'ocel_time']].copy()
-        event_df = event_df.set_index('ocel_id')
-        event_object_count_df_map[event_type] = event_df.join(event_object_count_df)
+    for event_type, event_type_df in event_types_to_df_map.items():
+        event_object_count_df_map[event_type] = event_type_df.merge(event_object_count_df, on=event_id_column, how='inner')
     return event_object_count_df_map
 
 # returns a dictionary mapping each object type to a dataframe containing the rows of 'object_summary_df' for objects
 # of that type
-def get_object_type_summary_df_map(objects_summary_df, object_types_to_db_table_map, object_id_column = 'ocel:oid'):
+def get_object_type_summary_df_map(objects_summary_df, object_types_to_df_map, object_id_column = 'ocel:oid'):
     object_type_summary_df_map = {}
-    for object_type, object_type_df in object_types_to_db_table_map.items():
-        object_type_summary_df_map[object_type] = objects_summary_df.merge(object_type_df, left_on=object_id_column, \
-                                                        right_on='ocel_id', how='inner', suffixes=('_2', None))
+    for object_type, object_type_df in object_types_to_df_map.items():
+        object_type_summary_df_map[object_type] = objects_summary_df.merge(object_type_df, on=object_id_column, \
+                                                        how='inner', suffixes=('_2', None))
     return object_type_summary_df_map
 
 # get all existing combinations of event types and object types in the ocel
@@ -211,7 +239,7 @@ def get_preceding_events_df(event_to_object_relations_df, events_df, atomic_evs,
     preceding_events_df = related_objects_df
     preceding_events_df['preceding_events'] = preceding_events_arr
     preceding_events_df['preceding_events_timestamps'] = preceding_events_timestamp_arr
-    preceding_events_df = preceding_events_df.rename(columns={'ocel:oid': 'related_objects'})
+    preceding_events_df = preceding_events_df.rename(columns={object_id_column: 'related_objects'})
     return preceding_events_df
 
 
@@ -289,7 +317,8 @@ def get_preceding_events_by_object_type_df(event_to_object_relations_df, events_
     preceding_events_by_object_type_df = related_objects_type_df
     preceding_events_by_object_type_df['preceding_events_obj_type'] = preceding_events_arr
     preceding_events_by_object_type_df['preceding_events_timestamps_obj_type'] = preceding_events_timestamp_arr
-    preceding_events_by_object_type_df = preceding_events_by_object_type_df.rename(columns={'ocel:oid': 'related_objects_type'})
+    preceding_events_by_object_type_df = preceding_events_by_object_type_df\
+        .rename(columns={object_id_column: 'related_objects_type'})
     return preceding_events_by_object_type_df
 
 #get list of time intervals according to the specified time interval and sampling rate
@@ -436,24 +465,24 @@ def get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechan
     if assignment_mechanism == 'starting':
         objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_start']]
         objs_to_time_df = objs_to_time_df\
-            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_start': 'assignment_mechanism_time'})
+            .rename(columns={'lifecycle_start': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'ending':
         objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_end']]
         objs_to_time_df = objs_to_time_df\
-            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
+            .rename(columns={'lifecycle_end': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'contains':
         objs_to_time_df = get_contained_objects(ti_cross_objs_df)
         objs_to_time_df = objs_to_time_df[[object_id_column, 'lifecycle_end']]
         objs_to_time_df = objs_to_time_df\
-            .rename(columns={object_id_column : 'ocel_id', 'lifecycle_end': 'assignment_mechanism_time'})
+            .rename(columns={'lifecycle_end': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'overlaps':
         objs_to_time_df = get_overlapping_objects(ti_cross_objs_df)
         objs_to_time_df = objs_to_time_df[[object_id_column, 'time_interval_right']]
         objs_to_time_df = objs_to_time_df\
-            .rename(columns={object_id_column : 'ocel_id', 'time_interval_right': 'assignment_mechanism_time'})
+            .rename(columns={'time_interval_right': 'assignment_mechanism_time'})
 
     else:
         raise ValueError('Invalid assignment mechasism selection')
@@ -466,8 +495,7 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     #to time periods/intervals and we can return a dataframe of events and their timestamps
     if atomic_evs:
         evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
-        evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
-                                                         event_timestamp_column: 'assignment_mechanism_time'})
+        evs_to_time_df = evs_to_time_df.rename(columns={event_timestamp_column: 'assignment_mechanism_time'})
     else:
         #if all events are not atomic then we need to use the respective strategy for assigning
         #events to time periods/intervals as per the selected assignment mechanism
@@ -475,25 +503,21 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
 
         if assignment_mechanism == 'starting':
             evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
-                                                             event_timestamp_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_timestamp_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'ending':
             evs_to_time_df = events_df[[event_id_column, event_endtime_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
-                                                             event_endtime_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_endtime_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'contains':
             evs_to_time_df = get_contained_events(ti_cross_evs_df, event_endtime_column)
             evs_to_time_df = evs_to_time_df[[event_id_column, event_endtime_column]]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
-                                                            event_endtime_column: 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={event_endtime_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'overlaps':
             evs_to_time_df = get_overlapping_events(ti_cross_evs_df, event_endtime_column)
             evs_to_time_df = evs_to_time_df[[event_id_column, 'time_interval_right']]
-            evs_to_time_df = evs_to_time_df.rename(columns={event_id_column : 'ocel_id',\
-                                                             'time_interval_right': 'assignment_mechanism_time'})
+            evs_to_time_df = evs_to_time_df.rename(columns={'time_interval_right': 'assignment_mechanism_time'})
 
         else:
             raise ValueError('Invalid assignment mechasism selection')
