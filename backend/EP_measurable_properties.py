@@ -110,7 +110,7 @@ def ep4(event_object_combinations, event_object_count_df_map, events_to_time_df,
     # Map combination of event type and object type to a time series in dictionary 'ep4_dict'.
     ep4_dict = {}
     for (event_type, object_type) in event_object_combinations:
-        event_object_count_df = event_object_count_df_map[event_type][['ocel_time', object_type]]
+        event_object_count_df = event_object_count_df_map[event_type][[object_type]]
         #get timestamps that represent interval/time-period assignments for events i.e. 'events_to_time_df' and 
         #merge with table containing the number of objects of each type per event i.e. event_object_count_df
         df = events_to_time_df.merge(event_object_count_df, on='ocel_id', how='inner', suffixes=('_2', None))

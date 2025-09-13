@@ -6,6 +6,7 @@ from pathlib import Path
 from setup import *
 from EP_measurable_properties import *
 from OP_measurable_properties import *
+from PP_measurable_properties import *
 from dotenv import load_dotenv
 import os
 from sktime.utils.plotting import plot_series
@@ -58,6 +59,9 @@ object_changes_df = get_object_changes_df(ocel)
 object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df, object_types_to_db_table_map)
 object_interactions_df = get_object_interactions_df(ocel)
 
+#get event and object types
+event_types = list(events_df[event_type_column].unique())
+object_types = pm4py.ocel.ocel_get_object_types(ocel)
 
 #check if the specified endtime attribute for events exists. If yes then we assume the presence of 
 # non-atomic events in the log.
@@ -116,13 +120,18 @@ time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
 objects_to_time_df = get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechanism)
 
+#get preceding events df for performance perspective properties
+preceding_events_df = get_preceding_events_df(event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
+preceding_events_by_object_type_df = get_preceding_events_by_object_type_df\
+                                        (event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
+
 #get all properties of the event perspective
 ep1_dict = ep1(event_types_to_db_table_map, events_to_time_df, sampling_rate)
 ep2_dict = ep2(event_types_to_db_table_map, events_to_time_df, aggregation_mode, sampling_rate)
 ep3_dict = ep3(event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 ep4_dict = ep4(event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
-
+#get all properties of the object perspective
 op1_dict = op1(object_types_to_db_table_map, objects_to_time_df, sampling_rate)
 op2_dict = op2(object_types_to_db_table_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op3_dict = op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
@@ -130,9 +139,18 @@ op4_dict = op4(event_to_object_relations_df_map, objects_to_time_df, aggregation
 op5_dict = op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
 op6_dict = op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate)
 
+#get all properties of the performance perspective
+pp1_dict = pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate)
+pp2_dict = pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate)
+if atomic_evs:
+    pp3_dict = {}
+else:
+    pp3_dict = pp3(events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
+
 property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
-                'op5': op5_dict, 'op6': op6_dict}
+                'op5': op5_dict, 'op6': op6_dict, 'pp1': pp1_dict, 'pp2': pp2_dict,\
+                'pp3': pp3_dict}
 
 property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute Value', \
                     'ep3': 'Number of Objects per Event', \
@@ -141,7 +159,10 @@ property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute Value',
                     'op3': 'Number of Events per Object', \
                     'op4': 'Number of Events of a Type per Object', \
                     'op5': 'Lifecycle Duration', \
-                    'op6': 'Number of Object Interactions per Event'}
+                    'op6': 'Number of Object Interactions per Event', \
+                    'pp1': 'Waiting Time', \
+                    'pp2': 'Synchronization Time', \
+                    'pp3': 'Service Time'}
 
 #process time series and plot
 for property, property_dict in property_dicts_map.items():
