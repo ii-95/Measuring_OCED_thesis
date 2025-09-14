@@ -60,17 +60,12 @@ event_types = list(events_df[event_type_column].unique())
 object_types = pm4py.ocel.ocel_get_object_types(ocel)
 
 event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
-event_types = list(events_df[event_type_column].unique())
 objects_summary_df = get_objects_summary_df(ocel)
 event_to_object_relations_df = get_event_to_object_relations_df(ocel)
-event_to_object_relations_df_map = get_event_to_object_type_relations_df_map(event_to_object_relations_df, event_object_combinations)
+event_to_object_relations_df_map = get_event_to_object_type_relations_df_map(event_to_object_relations_df.copy(), event_object_combinations)
 objects_df = get_objects_df(ocel)
 object_changes_df = get_object_changes_df(ocel)
 object_interactions_df = get_object_interactions_df(ocel)
-
-#get event and object types
-
-object_types = pm4py.ocel.ocel_get_object_types(ocel)
 
 
 #check if the specified endtime attribute for events exists. If yes then we assume the presence of 
@@ -78,11 +73,11 @@ object_types = pm4py.ocel.ocel_get_object_types(ocel)
 if event_endtime_column in events_df.columns:
     atomic_evs = False
     #for all atomic events (where endtime column has empty/null values, replace with value in ocel:timestamp column)
-    events_df = adjust_events_end_time(events_df, event_endtime_column)
+    events_df = adjust_events_end_time(events_df.copy(), event_endtime_column)
     # calculate lifecycle end time for objects to be calculated based on the maximum endtime of all events associated with
     # an object. By default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
-    objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
-                                                                    events_df, event_endtime_column)
+    objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df.copy(), event_to_object_relations_df.copy(),\
+                                                                    events_df.copy(), event_endtime_column)
 else:
     atomic_evs = True
 
@@ -102,7 +97,7 @@ if int_end == '':
         int_end = events_df[event_endtime_column].max()
 
 
-#<-----------Remove in prod----------->
+#<-----------Remove in prod-----------
 #add endtime column to events_df for testing. Each event gets a runtime ranging from it's start time 
 # i.e. ocel:timestamp up to a month from the start time.
 """ endtimes_hours = np.random.randint(0, 30, len(events_df)).astype('timedelta64[h]')
@@ -114,36 +109,32 @@ int_end = events_df[event_endtime_column].max()
 atomic_evs = False
 objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
                                                                     events_df, event_endtime_column) """
-#<-----------Remove in prod----------->
+#-----------Remove in prod----------->
 
 #get time intervals given the sampling rate and total interval. The intervals represent the division of the total interval
 #into time intervals of length equal to the sampling rate. Except the first and last time interval which may be smaller
 #if outside the range of the total interval.
 time_intervals = get_time_intervals(int_start, int_end, sampling_rate)
 
-#get a cross product of objects and events df with the time intervals
-#ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
-#ti_cross_evs_df = get_time_intervals_cross_events_df(events_df, time_intervals, event_endtime_column)
-
 #get list of events and objects assigned to a time interval 
 #if assign_mech = overlap then we get duplicate events/objects
 #if assign_mech = contains then a lot of events/objects are usually discarded
 #if assign_mech = starting or assign_mech = ending then we get the same number of events/objects as in the original ocel
 #atomic events remain unaffected by assign_mech and are neither duplicated nor discarded.
-events_to_time_df = get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
-objects_to_time_df = get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechanism)
+events_to_time_df = get_events_to_time_df(events_df.copy(), time_intervals, assignment_mechanism, event_endtime_column, atomic_evs)
+objects_to_time_df = get_objects_to_time_df(objects_summary_df.copy(), time_intervals, assignment_mechanism)
 
 
-object_types_to_df_map = get_object_types_to_df_map(objects_df, object_changes_df, object_types)
-event_types_to_df_map = get_event_types_to_df_map(events_df, event_types, atomic_evs, event_endtime_column)
+object_types_to_df_map = get_object_types_to_df_map(objects_df.copy(), object_changes_df.copy(), object_types)
+event_types_to_df_map = get_event_types_to_df_map(events_df.copy(), event_types, atomic_evs, event_endtime_column)
 
-event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_df_map)
-object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df, object_types_to_df_map)
+event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_df_map.copy())
+object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df.copy(), object_types_to_df_map.copy())
 
 #get preceding events df for performance perspective properties
-preceding_events_df = get_preceding_events_df(event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
+preceding_events_df = get_preceding_events_df(event_to_object_relations_df.copy(), events_df.copy(), atomic_evs, event_endtime_column)
 preceding_events_by_object_type_df = get_preceding_events_by_object_type_df\
-                                        (event_to_object_relations_df, events_df, atomic_evs, event_endtime_column)
+                                        (event_to_object_relations_df.copy(), events_df.copy(), atomic_evs, event_endtime_column)
 
 #get all properties of the event perspective
 ep1_dict = ep1(event_types_to_df_map, events_to_time_df, sampling_rate)
@@ -166,23 +157,33 @@ if atomic_evs:
     pp3_dict = {}
 else:
     pp3_dict = pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
+pp4_dict = pp4(pp1_dict, pp3_dict, event_types, atomic_evs)
+pp5_dict = pp5(pp2_dict, pp4_dict, event_types)
+pp6_dict = pp6(preceding_events_by_object_type_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
+pp7_dict = pp7_dict = pp7(preceding_events_df, preceding_events_by_object_type_df, event_object_combinations, events_to_time_df, \
+                atomic_evs, event_endtime_column, aggregation_mode, sampling_rate)
 
 property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
                 'op5': op5_dict, 'op6': op6_dict, 'pp1': pp1_dict, 'pp2': pp2_dict,\
-                'pp3': pp3_dict}
+                'pp3': pp3_dict, 'pp4': pp4_dict, 'pp5': pp5_dict, 'pp6': pp6_dict,\
+                'pp7': pp7_dict}
 
-property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute Value', \
+property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute', \
                     'ep3': 'Number of Objects per Event', \
                     'ep4': 'Number of Objects of a type per Event' , \
-                    'op1': 'Object Frequency', 'op2': 'Object Attribute Value', \
+                    'op1': 'Object Frequency', 'op2': 'Object Attribute', \
                     'op3': 'Number of Events per Object', \
                     'op4': 'Number of Events of a Type per Object', \
-                    'op5': 'Lifecycle Duration', \
+                    'op5': 'Lifecycle Duration (Hours)', \
                     'op6': 'Number of Object Interactions per Event', \
                     'pp1': 'Waiting Time (Hours)', \
                     'pp2': 'Synchronization Time (Hours)', \
-                    'pp3': 'Service Time (Hours)'}
+                    'pp3': 'Service Time (Hours)', \
+                    'pp4': 'Soujourn Time (Hours)', \
+                    'pp5': 'Flow Time (Hours)', \
+                    'pp6': 'Pooling Time(Hours)',\
+                    'pp7': 'Lagging Time(Hours)'}
 
 #process time series and plot
 for property, property_dict in property_dicts_map.items():

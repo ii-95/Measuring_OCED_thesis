@@ -125,17 +125,15 @@ def op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, 
     for (event_type, object_type), event_to_object_relations_df in event_to_object_relations_df_map.items():
         #For this property, we only wish to retain unique combinations of related events and objects 
         # of the specified types, irrespective of qualifiers and timestamps.
-        event_to_object_relations_df = event_to_object_relations_df[[event_id_column, event_type_column, 
+        df = event_to_object_relations_df[[event_id_column, event_type_column, 
                                                                     object_id_column, object_type_column]] \
                                                                     .drop_duplicates()
         #  Subsequently we count the number of events per object
-        event_to_object_relations_df = event_to_object_relations_df.groupby(object_id_column).count()\
-                                                        .reset_index()[[object_id_column,object_type_column]]\
+        df = df.groupby(object_id_column).count().reset_index()[[object_id_column,object_type_column]]\
                                                         .rename(columns={object_type_column: 'event_count'})
         #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
         #merge with 'event_to_object_relations_df' which contains all related events and objects of the specified types.
-        df = objects_to_time_df.merge(event_to_object_relations_df, on= object_id_column,\
-                                       how='inner', suffixes=('_2', None))
+        df = objects_to_time_df.merge(df, on= object_id_column, how='inner', suffixes=('_2', None))
         # Call function 'op4_iter' for each combination of object type and event type in the log 
         # to produce respective timeseries for number of events of the type per object of the type.
         # Map event type to time series in dictionary 'op4_dict'   
@@ -148,6 +146,7 @@ def op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampli
     # Input: object type, dataframe containing all objects of the specified type along with their
     # lifecycle duration and timestamps according to the assignment mechanism
     def op5_iter(object_type, df):
+            df['lifecycle_duration'] = df['lifecycle_duration']/3600
             ts_id = f'{object_type}'
             df = df.rename(columns={'lifecycle_duration': ts_id})
             df = df[['assignment_mechanism_time', ts_id]]
@@ -188,19 +187,20 @@ def op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_ra
             return ts
     
     op6_dict = {}
-    #remove all duplicate interactions from object_interactions_df
-    object_interactions_df['object_type_pairs'] = [(tuple(sorted(filter(None, x)))) for x in object_interactions_df\
+    obj_intr_df = object_interactions_df
+    #remove all duplicate interactions from obj_intr_df
+    obj_intr_df['object_type_pairs'] = [(tuple(sorted(filter(None, x)))) for x in obj_intr_df\
                                                    [[object_type_column, f'{object_type_column}_2']].to_numpy()]
-    object_interactions_df['object_id_pairs'] = [(tuple(sorted(filter(None, x)))) for x in object_interactions_df\
+    obj_intr_df['object_id_pairs'] = [(tuple(sorted(filter(None, x)))) for x in obj_intr_df\
                                                  [[object_id_column, f'{object_id_column}_2']].to_numpy()]
-    object_interactions_df = object_interactions_df[[event_id_column, 'object_id_pairs', 'object_type_pairs']]
-    object_interactions_df = object_interactions_df.drop_duplicates()
+    obj_intr_df = obj_intr_df[[event_id_column, 'object_id_pairs', 'object_type_pairs']]
+    obj_intr_df = obj_intr_df.drop_duplicates()
     #get all unique object type combinations in the log whose objects interact via events i.e. the objects are
     # related to the same event
-    object_to_object_type_combinations= object_interactions_df['object_type_pairs'].drop_duplicates()
+    object_to_object_type_combinations= obj_intr_df['object_type_pairs'].drop_duplicates()
     for object_to_object_type_combination in object_to_object_type_combinations:
         #filter rows for the specified object type combination 
-        combination_df = object_interactions_df[object_interactions_df['object_type_pairs']==object_to_object_type_combination]
+        combination_df = obj_intr_df[obj_intr_df['object_type_pairs']==object_to_object_type_combination]
         #get count of interactions per event
         interaction_count_df = combination_df.groupby(event_id_column).count().reset_index()
         #get timestamps of events according to assignment mechanism
