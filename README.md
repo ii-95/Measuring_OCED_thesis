@@ -20,8 +20,8 @@ Furthermore, please note the following:
 - The project supports non-atomic events by specifying an event attribute that contains
 the end time of events. If your provided log does not contain any such attribute and you wish to test this feature please uncomment lines 101-109 from backend/main.py. Same applies for the log provided in the default config that does not contain any such attribute.
 
-- Property functions EP2 and OP2 only create time series for values of numerical attributes of events and objects, respectively.
+- Property functions EP2, OP2 and RP3 only create time series for values of numerical attributes of events and objects, respectively.
 
-- The log in the default config doesn't contain any numerical event attribute. If you wish to test EP2 then please uncomment line 60 in backend/setup.py. The default log however does contain a few numerical object attributes.
+- The log in the default config doesn't contain any numerical event attribute. If you wish to test EP2 then please uncomment line 60 in backend/setup.py. The default log however does contain a few numerical object attributes but no attributes for resources i.e., the objects of 'employees' object type.
 
 - The project is in the development phase. The front end is yet to be built. The provided plotting functionality is only for interim testing and not a reflection of what the front UI will look like (which will hopefully be much nicer).

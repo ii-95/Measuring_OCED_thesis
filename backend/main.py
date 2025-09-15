@@ -7,6 +7,7 @@ from setup import *
 from EP_measurable_properties import *
 from OP_measurable_properties import *
 from PP_measurable_properties import *
+from RP_measurable_properties import *
 from dotenv import load_dotenv
 import os
 from sktime.utils.plotting import plot_series
@@ -163,16 +164,22 @@ pp6_dict = pp6(preceding_events_by_object_type_df, event_object_combinations, ev
 pp7_dict = pp7_dict = pp7(preceding_events_df, preceding_events_by_object_type_df, event_object_combinations, events_to_time_df, \
                 atomic_evs, event_endtime_column, aggregation_mode, sampling_rate)
 
+rp1_dict = rp1(ep4_dict, resource_object_type)
+rp2_dict = rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, sampling_rate)
+rp3_dict = rp3(op2_dict, resource_object_type)
+
 property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
                 'op5': op5_dict, 'op6': op6_dict, 'pp1': pp1_dict, 'pp2': pp2_dict,\
                 'pp3': pp3_dict, 'pp4': pp4_dict, 'pp5': pp5_dict, 'pp6': pp6_dict,\
-                'pp7': pp7_dict}
+                'pp7': pp7_dict, 'rp1': rp1_dict, 'rp2': rp2_dict, 'rp3': rp3_dict}
 
-property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute', \
+property_names_dict = {'ep1': 'Event Frequency',\
+                    'ep2': 'Event Attribute Value', \
                     'ep3': 'Number of Objects per Event', \
                     'ep4': 'Number of Objects of a type per Event' , \
-                    'op1': 'Object Frequency', 'op2': 'Object Attribute', \
+                    'op1': 'Object Frequency',\
+                    'op2': 'Object Attribute Value', \
                     'op3': 'Number of Events per Object', \
                     'op4': 'Number of Events of a Type per Object', \
                     'op5': 'Lifecycle Duration (Hours)', \
@@ -183,7 +190,10 @@ property_names_dict = {'ep1': 'Event Frequency', 'ep2': 'Event Attribute', \
                     'pp4': 'Soujourn Time (Hours)', \
                     'pp5': 'Flow Time (Hours)', \
                     'pp6': 'Pooling Time(Hours)',\
-                    'pp7': 'Lagging Time(Hours)'}
+                    'pp7': 'Lagging Time(Hours)', \
+                    'rp1': 'Number of Involved Resources per Event',\
+                    'rp2': 'Number of Active Resources',\
+                    'rp3': 'Resrouce Attribute'}
 
 #process time series and plot
 for property, property_dict in property_dicts_map.items():
