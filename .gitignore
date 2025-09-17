@@ -11,3 +11,4 @@ backend/post_ocel_inventory_management_2.sqlite
 backend/post_ocel_inventory_management_3.sqlite
 backend/post_ocel_inventory_management.sqlite
 *.pyc
+/backend/assets/analysis_results_plots

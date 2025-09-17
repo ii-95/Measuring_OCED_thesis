@@ -67,7 +67,7 @@ event_to_object_relations_df_map = get_event_to_object_type_relations_df_map(eve
 objects_df = get_objects_df(ocel)
 object_changes_df = get_object_changes_df(ocel)
 object_interactions_df = get_object_interactions_df(ocel)
-
+ocel_extended_df = get_ocel_extended_df(ocel)
 
 #check if the specified endtime attribute for events exists. If yes then we assume the presence of 
 # non-atomic events in the log.
@@ -75,6 +75,8 @@ if event_endtime_column in events_df.columns:
     atomic_evs = False
     #for all atomic events (where endtime column has empty/null values, replace with value in ocel:timestamp column)
     events_df = adjust_events_end_time(events_df.copy(), event_endtime_column)
+    ocel_extended_df[event_endtime_column] = events_df.merge(ocel_extended_df, on=event_id_column, how='inner')[event_endtime_column]
+
     # calculate lifecycle end time for objects to be calculated based on the maximum endtime of all events associated with
     # an object. By default, pm4py calculates this assuming atomic events which can not be used if non-atomic events exist.
     objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df.copy(), event_to_object_relations_df.copy(),\
@@ -104,6 +106,7 @@ if int_end == '':
 """ endtimes_hours = np.random.randint(0, 30, len(events_df)).astype('timedelta64[h]')
 endtimes_minutes = np.random.randint(0, 300, len(events_df)).astype('timedelta64[m]')
 events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_hours + endtimes_minutes
+ocel_extended_df[event_endtime_column] = events_df.merge(ocel_extended_df, on=event_id_column, how='inner')[event_endtime_column]
 
 #update int_end with test endtime maximum
 int_end = events_df[event_endtime_column].max()
@@ -133,9 +136,7 @@ event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_d
 object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df.copy(), object_types_to_df_map.copy())
 
 #get preceding events df for performance perspective properties
-preceding_events_df = get_preceding_events_df(event_to_object_relations_df.copy(), events_df.copy(), atomic_evs, event_endtime_column)
-preceding_events_by_object_type_df = get_preceding_events_by_object_type_df\
-                                        (event_to_object_relations_df.copy(), events_df.copy(), atomic_evs, event_endtime_column)
+preceding_events_df = get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column)
 
 #get all properties of the event perspective
 ep1_dict = ep1(event_types_to_df_map, events_to_time_df, sampling_rate)
@@ -160,9 +161,8 @@ else:
     pp3_dict = pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
 pp4_dict = pp4(pp1_dict, pp3_dict, event_types, atomic_evs)
 pp5_dict = pp5(pp2_dict, pp4_dict, event_types)
-pp6_dict = pp6(preceding_events_by_object_type_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
-pp7_dict = pp7_dict = pp7(preceding_events_df, preceding_events_by_object_type_df, event_object_combinations, events_to_time_df, \
-                atomic_evs, event_endtime_column, aggregation_mode, sampling_rate)
+pp6_dict = pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
+pp7_dict = pp7(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
 
 rp1_dict = rp1(ep4_dict, resource_object_type)
 rp2_dict = rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, sampling_rate)
@@ -204,7 +204,7 @@ for property, property_dict in property_dicts_map.items():
                 #filling padded intervals as well as interval which had missing values before padding
                 #due to oversampling in case of a large sampling rate (time period).
                 processed_ts = time_intervals.right.to_frame().merge(ts,\
-                            left_index=True, right_index=True, how='left').fillna(0).drop(columns=0)
+                            left_index=True, right_index=True, how='left').drop(columns=0)
                 #if the length of the last interval is less than sampling rate then copy it's value
                 #from the original ts as it will not be included in the merge
                 if ts.index[-1] > processed_ts.index[-1]:

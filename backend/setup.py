@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
+import itertools
 
 
 def agg(series, aggregation_mode, sampling_rate):
@@ -39,6 +40,10 @@ def get_object_changes_df(ocel):
 def get_object_interactions_df(ocel):
     object_interactions_df = pm4py.ocel.ocel_objects_interactions_summary(ocel)
     return object_interactions_df
+
+def get_ocel_extended_df(ocel):
+    ocel_extended_df = ocel.get_extended_table()
+    return ocel_extended_df
 
 #if non-atomic events exist in the log, then fill in endtimes for any possible atomic events 
 # in the log (those with null/empty values in endtine column) with their starting time.
@@ -165,161 +170,147 @@ def get_event_to_object_type_relations_df_map(event_to_object_relations_df, even
 
 # returns a dataframe with a row for each event 'e' containing all it's preceding events i.e. events that: 
 # - Occur (or end if non-atomic events) before in time compared to e
-# - Have atleast one related object in common with 'e' that is not shared by another event (that is not e)
+# - Have atleast one related object (of each object type, excluding each object type, including all object types) 
+#   in common with 'e' that is not shared by another event (that is not e)
 #   that occurs (or ends if non-atomic events) after it but before e.
-# basically for each event e, it contains all events that are directly-followed by e in an object centric context.
 # also includes timestamps for these events in an ordered list (from the latest to earliest)
-
-def get_preceding_events_df(event_to_object_relations_df, events_df, atomic_evs, event_endtime_column,\
+# columns with name ending in 'alltypes' contain information irrespective of object type, columns with name ending
+# in an object type contain information only with respect to that object type, whereas columns with name ending in
+# excluding_{object_type} contain information with respect to all types excluding that object type.
+def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
                             event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
-                            event_type_column = 'ocel:activity', object_id_column = 'ocel:oid'):
-
-    if atomic_evs:
-        event_to_object_relations_df = event_to_object_relations_df.sort_values(by=event_timestamp_column, ignore_index=True)
-        related_objects_df = event_to_object_relations_df\
-            .groupby([event_id_column,event_timestamp_column, event_type_column], sort=False)\
-            .agg(set)[[object_id_column]].reset_index()
-        
-        events_arr = related_objects_df[event_id_column].values.tolist()
-        events_timestamp_arr = related_objects_df[event_timestamp_column].values.tolist()
-        related_objects_arr = related_objects_df[object_id_column].values.tolist()
-        preceding_events_arr =  [None] * len(related_objects_df)
-        preceding_events_timestamp_arr = [None] * len(related_objects_df)
-        for i in range(0, len(related_objects_df)):
-            related_objects = related_objects_arr[i]
-            preceding_events_arr[i] = []
-            preceding_events_timestamp_arr[i] = []
-            for j in range(i-1, -1, -1):
-
-                if not related_objects:
-                    break
-
-                common_objects = related_objects.intersection(related_objects_arr[j])
-                if common_objects:
-                    preceding_events_arr[i].append(events_arr[j])
-                    preceding_events_timestamp_arr[i].append(events_timestamp_arr[j])
-                    related_objects = related_objects - common_objects
-
-    else:
-
-        event_to_object_relations_df = event_to_object_relations_df\
-            .merge(events_df[[event_id_column,event_endtime_column]], on=event_id_column, how='inner')
-        
-        event_to_object_relations_df = event_to_object_relations_df\
-            .sort_values(by=[event_endtime_column, event_timestamp_column], ignore_index=True)
-        
-        related_objects_df = event_to_object_relations_df\
-            .groupby([event_id_column,event_timestamp_column, event_endtime_column, event_type_column], sort=False)\
-            .agg(set)[[object_id_column]].reset_index()
-        
-        events_arr = related_objects_df[event_id_column].values.tolist()
-        events_starttime_arr = related_objects_df[event_timestamp_column].values.tolist()
-        related_objects_arr = related_objects_df[object_id_column].values.tolist()
-        events_endtime_arr = related_objects_df[event_endtime_column].values.tolist()
-        preceding_events_arr =  [None] * len(related_objects_df)
-        preceding_events_timestamp_arr = [None] * len(related_objects_df)
-        for i in range(0, len(related_objects_df)):
-            related_objects = related_objects_arr[i]
-            preceding_events_arr[i] = []
-            preceding_events_timestamp_arr[i] = []
-            for j in range(i-1, -1, -1):
-
-                if not related_objects:
-                    break
-
-                if events_starttime_arr[i] < events_endtime_arr[j]:
-                    continue
-
-                common_objects = related_objects.intersection(related_objects_arr[j])
-                if common_objects:
-                    preceding_events_arr[i].append(events_arr[j])
-                    preceding_events_timestamp_arr[i].append(events_endtime_arr[j])
-                    related_objects = related_objects - common_objects
-
-    preceding_events_df = related_objects_df
-    preceding_events_df['preceding_events'] = preceding_events_arr
-    preceding_events_df['preceding_events_timestamps'] = preceding_events_timestamp_arr
-    preceding_events_df = preceding_events_df.rename(columns={object_id_column: 'related_objects'})
-    return preceding_events_df
-
-
-#for each event e and a object type, get events that:
-# - Occur (or end for non-atomic events) before e
-# - Share atlest one common object with e of the object type that is not shared by another event that occurs (or ends)
-#   after it but before e
-def get_preceding_events_by_object_type_df(event_to_object_relations_df, events_df, atomic_evs, event_endtime_column,\
-                            event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
-                            event_type_column = 'ocel:activity', object_id_column = 'ocel:oid', \
                             object_type_column = 'ocel:type'):
+    preceding_events_df = ocel_extended_df.copy()
+    object_cols = [col for col in preceding_events_df.columns if object_type_column in col]
+    df = preceding_events_df[object_cols]
+    df = df.map(lambda d: d if isinstance(d, list) else [])
+    preceding_events_df[object_cols] = df
+    objects_2d_list = df.values.tolist()
+    column_list = list()
+    for x in objects_2d_list:
+        column_list.append(list(itertools.chain.from_iterable(x)))
+    preceding_events_df['ocel:type'] = column_list
 
     if atomic_evs:
-        event_to_object_relations_df = event_to_object_relations_df.sort_values(by=event_timestamp_column, ignore_index=True)
-        related_objects_type_df = event_to_object_relations_df\
-            .groupby([event_id_column,event_timestamp_column, event_type_column, object_type_column], sort=False)\
-            .agg(set)[[object_id_column]].reset_index()
-        events_arr = related_objects_type_df[event_id_column].values.tolist()
-        events_timestamp_arr = related_objects_type_df[event_timestamp_column].values.tolist()
-        related_objects_arr = related_objects_type_df[object_id_column].values.tolist()
-        object_type_arr = related_objects_type_df[object_type_column].values.tolist()
-        preceding_events_arr =  [None] * len(related_objects_type_df)
-        preceding_events_timestamp_arr = [None] * len(related_objects_type_df)
-        for i in range(0, len(related_objects_type_df)):
-            related_objects = related_objects_arr[i]
-            preceding_events_arr[i] = []
-            preceding_events_timestamp_arr[i] = []
-            for j in range(i-1, -1, -1):
-                if not related_objects:
-                    break
-                if object_type_arr[i] == object_type_arr[j]:
-                    common_objects = related_objects.intersection(related_objects_arr[j])
-                    if common_objects:
-                        preceding_events_arr[i].append(events_arr[j])
-                        preceding_events_timestamp_arr[i].append(events_timestamp_arr[j])
-                        related_objects = related_objects - common_objects
+        preceding_events_df = preceding_events_df.sort_values(by=event_timestamp_column, ignore_index=True)
+        event_id_arr = preceding_events_df[event_id_column].values.tolist()
+        event_timestamp_arr = preceding_events_df[event_timestamp_column].values.tolist()
+        related_objects_alltypes_arr = preceding_events_df[object_type_column].values.tolist()
+        related_objects_by_type_arr_dict = {}
+        preceding_events_alltypes_arr = [None] * len(preceding_events_df)
+        preceding_events_time_alltypes_arr = [None] * len(preceding_events_df)
+        preceding_events_by_type_arr_dict = {}
+        preceding_events_time_by_type_arr_dict = {}
+        preceding_events_excluding_type_arr_dict = {}
+        preceding_events_time_excluding_type_arr_dict = {}
+        for object_type in object_types:
+            preceding_events_by_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_time_by_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_excluding_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_time_excluding_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            related_objects_by_type_arr_dict[object_type] = preceding_events_df[f'{object_type_column}:{object_type}'].values
 
+        for i in range(0, len(preceding_events_df)):
+            related_objects_alltypes = set(related_objects_alltypes_arr[i])
+            if not related_objects_alltypes:
+                continue
+            related_objects_by_type_dict = {object_type: [None] * len(preceding_events_df) for object_type in object_types}
+            preceding_events_alltypes_arr[i] = []
+            preceding_events_time_alltypes_arr[i] = []
+            for object_type in object_types:
+                related_objects_by_type_dict[object_type] = set(related_objects_by_type_arr_dict[object_type][i])
+                preceding_events_by_type_arr_dict[object_type][i] = []
+                preceding_events_time_by_type_arr_dict[object_type][i] = []
+                preceding_events_excluding_type_arr_dict[object_type][i] = []
+                preceding_events_time_excluding_type_arr_dict[object_type][i] = []
+            for j in range(i-1, -1, -1):
+                if not related_objects_alltypes:
+                    break
+                common_objects_alltypes = related_objects_alltypes.intersection(set(related_objects_alltypes_arr[j]))
+                if common_objects_alltypes:
+                    preceding_events_alltypes_arr[i].append(event_id_arr[j])
+                    preceding_events_time_alltypes_arr[i].append(event_timestamp_arr[j])
+                    for object_type in object_types:
+                        common_objects_by_type = related_objects_by_type_dict[object_type].intersection(common_objects_alltypes)
+                        if common_objects_by_type:
+                            preceding_events_by_type_arr_dict[object_type][i].append(event_id_arr[j])
+                            preceding_events_time_by_type_arr_dict[object_type][i].append(event_timestamp_arr[j])
+                        else:
+                            preceding_events_excluding_type_arr_dict[object_type][i].append(event_id_arr[j])
+                            preceding_events_time_excluding_type_arr_dict[object_type][i].append(event_timestamp_arr[j])
+                    related_objects_alltypes = related_objects_alltypes - common_objects_alltypes
+
+        preceding_events_df['preceding_events_alltypes'] = preceding_events_alltypes_arr
+        preceding_events_df['preceding_events_time_alltypes'] = preceding_events_time_alltypes_arr
+        for object_type in object_types:
+            preceding_events_df[f'preceding_events_{object_type}'] = preceding_events_by_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_time_{object_type}'] = preceding_events_time_by_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_excluding_{object_type}'] = preceding_events_excluding_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_time_excluding_{object_type}'] = preceding_events_time_excluding_type_arr_dict[object_type]
     else:
+        preceding_events_df = preceding_events_df.sort_values(by=[event_endtime_column, event_timestamp_column], ignore_index=True)
+        event_id_arr = preceding_events_df[event_id_column].values.tolist()
+        event_starttime_arr = preceding_events_df[event_timestamp_column].values.tolist()
+        event_endtime_arr = preceding_events_df[event_endtime_column].values.tolist()
+        related_objects_alltypes_arr = preceding_events_df[object_type_column].values.tolist()
+        related_objects_by_type_arr_dict = {}
+        preceding_events_alltypes_arr = [None] * len(preceding_events_df)
+        preceding_events_endtime_alltypes_arr = [None] * len(preceding_events_df)
+        preceding_events_by_type_arr_dict = {}
+        preceding_events_excluding_type_arr_dict = {}
+        preceding_events_endtime_by_type_arr_dict = {}
+        preceding_events_endtime_excluding_type_arr_dict = {}
+        for object_type in object_types:
+            preceding_events_by_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_excluding_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_endtime_by_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            preceding_events_endtime_excluding_type_arr_dict[object_type] = [None] * len(preceding_events_df)
+            related_objects_by_type_arr_dict[object_type] = preceding_events_df[f'{object_type_column}:{object_type}'].values
 
-        event_to_object_relations_df = event_to_object_relations_df\
-            .merge(events_df[[event_id_column,event_endtime_column]], on=event_id_column, how='inner')
-        event_to_object_relations_df = event_to_object_relations_df\
-            .sort_values(by=[event_endtime_column, event_timestamp_column], ignore_index=True)
-        related_objects_type_df = event_to_object_relations_df\
-            .groupby([event_id_column,event_timestamp_column, event_endtime_column, event_type_column,\
-                       object_type_column], sort=False)\
-            .agg(set)[[object_id_column]].reset_index()
-        
-        events_arr = related_objects_type_df[event_id_column].values.tolist()
-        events_starttime_arr = related_objects_type_df[event_timestamp_column].values.tolist()
-        related_objects_arr = related_objects_type_df[object_id_column].values.tolist()
-        object_type_arr = related_objects_type_df[object_type_column].values.tolist()
-        events_endtime_arr = related_objects_type_df[event_endtime_column].values.tolist()
-        preceding_events_arr =  [None] * len(related_objects_type_df)
-        preceding_events_timestamp_arr = [None] * len(related_objects_type_df)
-        for i in range(0, len(related_objects_type_df)):
-            related_objects = related_objects_arr[i]
-            preceding_events_arr[i] = []
-            preceding_events_timestamp_arr[i] = []
+        for i in range(0, len(preceding_events_df)):
+            related_objects_alltypes = set(related_objects_alltypes_arr[i])
+            event_starttime = event_starttime_arr[i]
+            if not related_objects_alltypes:
+                continue
+            related_objects_by_type_dict = {object_type: [None] * len(preceding_events_df) for object_type in object_types}
+            preceding_events_alltypes_arr[i] = []
+            preceding_events_endtime_alltypes_arr[i] = []
+            for object_type in object_types:
+                related_objects_by_type_dict[object_type] = set(related_objects_by_type_arr_dict[object_type][i])
+                preceding_events_by_type_arr_dict[object_type][i] = []
+                preceding_events_endtime_by_type_arr_dict[object_type][i] = []
+                preceding_events_excluding_type_arr_dict[object_type][i] = []
+                preceding_events_endtime_excluding_type_arr_dict[object_type][i] = []
             for j in range(i-1, -1, -1):
-
-                if not related_objects:
+                if not related_objects_alltypes:
                     break
-
-                if events_starttime_arr[i] < events_endtime_arr[j]:
+                if event_starttime < event_endtime_arr[j]:
                     continue
+                common_objects_alltypes = related_objects_alltypes.intersection(set(related_objects_alltypes_arr[j]))
+                if common_objects_alltypes:
+                    preceding_events_alltypes_arr[i].append(event_id_arr[j])
+                    preceding_events_endtime_alltypes_arr[i].append(event_endtime_arr[j])
+                    
+                    for object_type in object_types:
+                        common_objects_by_type = related_objects_by_type_dict[object_type].intersection(common_objects_alltypes)
+                        if common_objects_by_type:
+                            preceding_events_by_type_arr_dict[object_type][i].append(event_id_arr[j])
+                            preceding_events_endtime_by_type_arr_dict[object_type][i].append(event_endtime_arr[j])
+                        else:
+                            preceding_events_excluding_type_arr_dict[object_type][i].append(event_id_arr[j])
+                            preceding_events_endtime_excluding_type_arr_dict[object_type][i].append(event_endtime_arr[j])
+                            
+                    related_objects_alltypes = related_objects_alltypes - common_objects_alltypes
 
-                if object_type_arr[i] == object_type_arr[j]:
-                    common_objects = related_objects.intersection(related_objects_arr[j])
-                    if common_objects:
-                        preceding_events_arr[i].append(events_arr[j])
-                        preceding_events_timestamp_arr[i].append(events_endtime_arr[j])
-                        related_objects = related_objects - common_objects
 
-    preceding_events_by_object_type_df = related_objects_type_df
-    preceding_events_by_object_type_df['preceding_events_obj_type'] = preceding_events_arr
-    preceding_events_by_object_type_df['preceding_events_timestamps_obj_type'] = preceding_events_timestamp_arr
-    preceding_events_by_object_type_df = preceding_events_by_object_type_df\
-        .rename(columns={object_id_column: 'related_objects_type'})
-    return preceding_events_by_object_type_df
+        preceding_events_df['preceding_events_alltypes'] = preceding_events_alltypes_arr
+        preceding_events_df['preceding_events_time_alltypes'] = preceding_events_endtime_alltypes_arr
+        for object_type in object_types:
+            preceding_events_df[f'preceding_events_{object_type}'] = preceding_events_by_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_time_{object_type}'] = preceding_events_endtime_by_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_excluding_{object_type}'] = preceding_events_excluding_type_arr_dict[object_type]
+            preceding_events_df[f'preceding_events_time_excluding_{object_type}'] = preceding_events_endtime_excluding_type_arr_dict[object_type]
+    return preceding_events_df
 
 #get list of time intervals according to the specified time interval and sampling rate
 def get_time_intervals(start_time, end_time, sampling_rate):
