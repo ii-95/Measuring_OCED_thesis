@@ -317,12 +317,13 @@ def get_time_intervals(start_time, end_time, sampling_rate):
     offset = pd.tseries.frequencies.to_offset(sampling_rate)
     start = (start_time - offset).normalize()
     end = (end_time + offset).normalize()
-    time_intervals = list(pd.interval_range(start, end, freq=sampling_rate))
+    time_intervals = pd.interval_range(start, end, freq=sampling_rate)
+    #time_intervals = list(pd.interval_range(start, end, freq=sampling_rate))
     #correct start of first interval
-    time_intervals[0] = pd.Interval(start_time, time_intervals[0].right, closed='right')
+    #time_intervals[0] = pd.Interval(start_time, time_intervals[0].right, closed='right')
     #correct end of last interval
-    time_intervals[-1] = pd.Interval(time_intervals[-1].left, end_time, closed='right')
-    time_intervals = pd.IntervalIndex(time_intervals)
+    #time_intervals[-1] = pd.Interval(time_intervals[-1].left, end_time, closed='right')
+    #time_intervals = pd.IntervalIndex(time_intervals)
     return time_intervals
 
 #a cross join of time intervals_df and objects_summary_df
@@ -486,6 +487,8 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     #to time periods/intervals and we can return a dataframe of events and their timestamps
     if atomic_evs:
         evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
+        evs_to_time_df = evs_to_time_df[(evs_to_time_df[event_timestamp_column] > time_intervals[0].left) \
+            & (evs_to_time_df[event_timestamp_column] <= time_intervals[-1].right)]
         evs_to_time_df = evs_to_time_df.rename(columns={event_timestamp_column: 'assignment_mechanism_time'})
     else:
         #if all events are not atomic then we need to use the respective strategy for assigning

@@ -29,8 +29,8 @@ resource_object_type = os.getenv('resource_object_type')
 #endtime is the event attribute that is to be treated as the end time of non-atomic events
 event_endtime_column = os.getenv('events_endtime_attribute')
 #start and end of the time interval over which time series are to be constructed
-int_start = os.getenv('time_series_interval_start')
-int_end = os.getenv('time_series_interval_end')
+int_start = pd.to_datetime(os.getenv('time_series_interval_start'), utc=True)
+int_end = pd.to_datetime(os.getenv('time_series_interval_end'), utc=True)
 
 #We use use the ocel as a pm4py object 'ocel' for data processing and analysis.
 # get ocel as a pm4py object 
@@ -195,23 +195,22 @@ property_names_dict = {'ep1': 'Event Frequency',\
                     'rp2': 'Number of Active Resources',\
                     'rp3': 'Resrouce Attribute'}
 
+TS_collection = {}
 #process time series and plot
 for property, property_dict in property_dicts_map.items():
     if property_dict:
         for non_temporal_parameters, ts in property_dict.items():
             if not ts.empty:
                 #padding the timeseries on both ends to align with specified intervals.
-                #filling padded intervals as well as interval which had missing values before padding
-                #due to oversampling in case of a large sampling rate (time period).
-                processed_ts = time_intervals.right.to_frame().merge(ts,\
-                            left_index=True, right_index=True, how='left').drop(columns=0)
-                #if the length of the last interval is less than sampling rate then copy it's value
-                #from the original ts as it will not be included in the merge
-                if ts.index[-1] > processed_ts.index[-1]:
-                    processed_ts.iloc[-1] = ts.iloc[-1]
-                if isinstance(non_temporal_parameters, tuple):
-                    non_temporal_parameters = ', '.join(non_temporal_parameters   )
-                plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs: ({non_temporal_parameters}) with assignment_mechanism = {assignment_mechanism}')
-                plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
-                plt.savefig(plot_file_path, bbox_inches='tight', dpi = 600)
-                plt.close()
+                processed_ts = time_intervals.right.to_frame().merge(ts, left_index=True, right_index=True, how='left')\
+                    .drop(columns=0).iloc[:,0]
+                if not processed_ts.isna().any():
+                    TS_collection[(property, non_temporal_parameters)] = processed_ts
+                    if isinstance(non_temporal_parameters, tuple):
+                        non_temporal_parameters = ', '.join(non_temporal_parameters)
+                    ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
+                    processed_ts.to_csv(ts_file_path)   
+                    plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
+                    plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
+                    plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
+                    plt.close()
