@@ -4,7 +4,9 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
 import itertools
-
+import json
+from pathlib import Path
+import os
 
 def agg(series, aggregation_mode, sampling_rate):
     if type(series) == pd.Series:
@@ -517,3 +519,53 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
             raise ValueError('Invalid assignment mechasism selection')
     
     return evs_to_time_df
+
+def remap_keys(mapping):
+    return [{'tsid':k, 'ar': v} for k, v in mapping.items()]
+
+def save_ar_to_json(ar_collection, technique_name):
+    ar_file_path = str(Path(f'backend/assets/analysis_results/{technique_name}.json').resolve())
+    if technique_name in ['Change Point Detection', 'Forecasting', 'Threshold Based Point Detection']:
+        if technique_name == 'Forecasting':
+            json_ar_collection = {}
+            ar_collection_copy = ar_collection.copy()
+            for tsid, ar_series in ar_collection_copy.items():
+                ar_series.index = pd.to_datetime(ar_series.index.end_time.normalize(), utc=True)
+                ar_series.index = ar_series.index.map(lambda x: x.isoformat())
+                ar = ar_series.to_dict()
+                json_ar_collection[tsid] = ar
+        else:
+            json_ar_collection = ar_collection.copy()
+
+        with open(ar_file_path, 'w', encoding='utf-8') as f:
+            json.dump(remap_keys(json_ar_collection), f, indent=4, ensure_ascii=False)
+
+    elif technique_name == 'Granger Causality':
+        df = pd.DataFrame(ar_collection[['caused']].values.tolist()).rename(columns = {0 : 'tsid' })
+        df['ar'] = ar_collection[['causing','lag']].values.tolist()
+        df = df.groupby('tsid').agg(list).reset_index()
+        df.to_json(ar_file_path, orient='records', indent=4, force_ascii= False)
+
+def convert_ar_to_json(ar_collection, technique_name):
+    if technique_name in ['Change Point Detection', 'Forecasting', 'Threshold Based Point Detection']:
+        if technique_name == 'Forecasting':
+            ar_collection_copy = ar_collection.copy()
+            json_ar_collection = {}
+            for tsid, ar_series in ar_collection_copy.items():
+                ar_series.index = pd.to_datetime(ar_series.index.end_time.normalize(), utc=True)
+                ar_series.index = ar_series.index.map(lambda x: x.isoformat())
+                ar = ar_series.to_dict()
+                json_ar_collection[tsid] = ar
+        else:
+            json_ar_collection = ar_collection.copy()
+        
+        json_ar_collection = json.dumps(remap_keys(json_ar_collection), indent=4, ensure_ascii=False)
+
+    elif technique_name == 'Granger Causality':
+        df = pd.DataFrame(ar_collection[['caused']].values.tolist()).rename(columns = {0 : 'tsid' })
+        df['ar'] = ar_collection[['causing','lag']].values.tolist()
+        df = df.groupby('tsid').agg(list).reset_index()
+        json_ar_collection = df.to_json(orient='records', indent=4, force_ascii= False)
+    
+    return json_ar_collection
+

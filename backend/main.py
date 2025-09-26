@@ -8,13 +8,17 @@ from EP_measurable_properties import *
 from OP_measurable_properties import *
 from PP_measurable_properties import *
 from RP_measurable_properties import *
+from time_series_analysis import *
 from dotenv import load_dotenv
 import os
 from sktime.utils.plotting import plot_series
 import matplotlib.pyplot as plt
 import math
-
+from statsmodels.tools.sm_exceptions import InterpolationWarning, ValueWarning
+import warnings
 pd.options.mode.copy_on_write = True
+warnings.simplefilter('ignore', InterpolationWarning)
+warnings.simplefilter('ignore', ValueWarning)
 
 load_dotenv(dotenv_path="inputs.env")
 
@@ -31,6 +35,144 @@ event_endtime_column = os.getenv('events_endtime_attribute')
 #start and end of the time interval over which time series are to be constructed
 int_start = pd.to_datetime(os.getenv('time_series_interval_start'), utc=True)
 int_end = pd.to_datetime(os.getenv('time_series_interval_end'), utc=True)
+
+tsa_technique = os.getenv('tsa_technique')
+
+if tsa_technique == 'Change Point Detection':
+    
+    model = os.getenv('cp_model')
+    
+    min_size = os.getenv('cp_min_size')
+    if min_size:
+        min_size = int(min_size)
+    
+    jump = os.getenv('cp_jump')
+    if jump:
+        jump = int(jump)
+    
+    penalty = os.getenv('cp_penalty')
+    if penalty:
+        penalty = float(penalty)
+    
+    tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
+
+elif tsa_technique == 'Granger Causality':
+    
+    lag = os.getenv('gc_lag')
+    if lag:
+        if ',' in lag:
+            lag = ''.join(lag.split()).split(',')
+            lag = list(map(int, lag))
+
+        else:
+            lag = int(lag)
+    
+    p_value_threshold = os.getenv('gc_p_value_thresh')
+    if p_value_threshold:
+        p_value_threshold = float(p_value_threshold)
+    
+    tsa_params = {'lag': lag, 'p_value_threshold': p_value_threshold}
+
+elif tsa_technique == 'Forecasting':
+    
+    periods_to_predict = os.getenv('fc_periods')
+    if periods_to_predict:
+        periods_to_predict = int(periods_to_predict)
+    
+    start_p = os.getenv('fc_start_p')
+    if start_p:
+        start_p = int(start_p)
+    
+    start_q = os.getenv('fc_start_q')
+    if start_q:
+        start_q = int(start_q)
+    
+    start_P = os.getenv('fc_start_P_s')
+    if start_P:
+        start_P = int(start_P)
+    
+    start_Q = os.getenv('fc_start_Q_s')
+    if start_Q:
+        start_Q = int(start_Q)
+    
+    max_p = os.getenv('fc_max_p')
+    if max_p:
+        max_p = int(max_p)
+    
+    max_q = os.getenv('fc_max_q')
+    if max_q:
+        max_q = int(max_q)
+    
+    max_P = os.getenv('fc_max_P_s')
+    if max_P:
+        max_P = int(max_P)
+    
+    max_Q = os.getenv('fc_max_Q_s')
+    if max_Q:
+        max_Q = int(max_Q)
+    
+    information_criterion = os.getenv('fc_information_criterion')
+    if information_criterion not in ['aicc', 'aic', 'bic', 'hqic', 'oob', '', None]:
+        raise ValueError('Invalid information criterion specified for forecasting')
+    
+    test = os.getenv('fc_test')
+    if test not in ['adf', 'kpss', 'pp', '', None]:
+        raise ValueError('Invalid test specified for forecasting')
+    
+    maxiter = os.getenv('fc_maxiter')
+    if maxiter:
+        maxiter = int(maxiter)
+    
+    tsa_params = {'periods_to_predict': periods_to_predict, 'start_p': start_p, 'start_q': start_q, 'start_P': start_P,\
+                    'start_Q': start_Q, 'max_p': max_p, 'max_q': max_q, 'max_P': max_P, 'max_Q': max_Q,\
+                    'information_criterion': information_criterion, 'test': test, 'maxiter': maxiter}
+
+elif tsa_technique == 'Threshold Based Point Detection':
+    
+    mode = os.getenv('thresh_pd_mode')
+    if mode not in ['quantile', 'relative change', 'nsmallest', 'nlargest']:
+        raise ValueError('Invalid mode selected for Threshold Based Point Detection')
+    
+    comparison_operator = os.getenv('thresh_pd_comparison_operator')
+    if mode in ['quantile', 'relative change']:
+        if comparison_operator not in ['between', 'greater or equal to', 'lesser or equal to']:
+            raise ValueError('Invalid comparison operator selected for Threshold Based Point Detection')
+    else:
+        comparison_operator = None
+    
+    threshold_1 = os.getenv('thresh_pd_threshold_1')
+    if not threshold_1:
+        raise ValueError('A primary threshold must be provided')
+    else:
+        threshold_1 = float(threshold_1)
+
+    if mode == 'quantile' and (threshold_1 < 0 or threshold_1 > 1):
+        raise ValueError('Threshold for quantile must be between 0 and 1')
+
+    threshold_2 = os.getenv('thresh_pd_threshold_2')
+
+    if comparison_operator == 'between': 
+        if not threshold_2:
+            raise ValueError('An upper threshold must be provided')
+        else:
+            threshold_2 = float(threshold_2)
+
+        if threshold_2 < threshold_1:
+            raise ValueError('Upper threshold cannot be lesser than the lower threshold')
+
+        if mode == 'quantile' and (threshold_2 < 0 or threshold_2 > 1):
+                raise ValueError('Threshold for quantile must be between 0 and 1 when mode = quantile')
+    else:
+        threshold_2 = None
+    
+    tsa_params = {'mode': mode, 'comparison_operator' : comparison_operator, 'threshold_1': threshold_1, \
+                  'threshold_2': threshold_2 }
+
+elif not tsa_technique:
+    tsa_technique = None
+    
+else: 
+    raise ValueError('Invalid tsa technique selected')
 
 #We use use the ocel as a pm4py object 'ocel' for data processing and analysis.
 # get ocel as a pm4py object 
@@ -208,9 +350,41 @@ for property, property_dict in property_dicts_map.items():
                     TS_collection[(property, non_temporal_parameters)] = processed_ts
                     if isinstance(non_temporal_parameters, tuple):
                         non_temporal_parameters = ', '.join(non_temporal_parameters)
-                    ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
-                    processed_ts.to_csv(ts_file_path)   
-                    plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
-                    plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
-                    plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
-                    plt.close()
+                    #ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
+                    #processed_ts.to_csv(ts_file_path)   
+                    #plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
+                    #plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
+                    #plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
+                    #plt.close()
+
+#constant time series i.e. where all time periods have the same value will not be considered for further analysis.
+ar_ts_collection = {}
+for tsid, ts in TS_collection.items():
+    if not len(ts.unique()) == 1:
+        ar_ts_collection[tsid] = ts
+
+#determine range of possible seasonal periods
+if sampling_rate == 'W':
+    series_length = (int_end - int_start) / pd.Timedelta(7,'D')
+    min_seasonal_period = 4
+    max_seasonal_period = math.ceil(series_length/3)
+if sampling_rate == 'ME':
+    series_length = (int_end - int_start) / pd.Timedelta(30,'D')
+    min_seasonal_period = 3
+    max_seasonal_period = math.ceil(series_length/3)
+if sampling_rate == 'QE':
+    series_length = (int_end - int_start) / pd.Timedelta(90,'D')
+    min_seasonal_period = 2
+    max_seasonal_period = math.ceil(series_length/3)
+if sampling_rate == 'YE':
+    series_length = (int_end - int_start) / pd.Timedelta(365,'D')
+    min_seasonal_period = 2
+    max_seasonal_period = math.ceil(series_length/3)
+if max_seasonal_period < min_seasonal_period:
+    max_seasonal_period = min_seasonal_period
+
+print(tsa_technique)
+print(tsa_params)
+if tsa_technique:
+    ar_collection = time_series_analysis(ar_ts_collection, tsa_technique, min_seasonal_period, max_seasonal_period, sampling_rate, tsa_params)
+    save_ar_to_json(ar_collection, tsa_technique)

@@ -3,7 +3,7 @@ This repository contains the implementation of the Master's Thesis 'Measuring OC
 
 The project requires python and can be run by following the steps below:
 
-1) Install required packages contained within /backend/requirements.txt using tool of choice.
+1) Install required packages contained within /requirements.txt using tool of choice. Ideally use Python 3.11 to avoid dependency conflicts. 
 
 2) Configure user inputs in /inputs.env. Fields which require you to choose from options have the options mentioned above them in the inputs.env file.
 
