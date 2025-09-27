@@ -22,22 +22,35 @@ warnings.simplefilter('ignore', ValueWarning)
 
 load_dotenv(dotenv_path="inputs.env")
 
-# inputs provided by user (to be replaced with input from frontend)
+# inputs provided by user via inputs.env (to be replaced with input from frontend)
 path_to_ocel = Path(os.getenv('path_to_ocel')).resolve()
+
 aggregation_mode = os.getenv('aggregation_mode')
+if aggregation_mode not in ['sum', 'mean', 'min', 'max']:
+    raise ValueError('Invalid aggregation mode')
+
 sampling_rate = os.getenv('sampling_rate')
+if sampling_rate not in ['W','ME','QE','YE']:
+    raise ValueError('Invalid sampling rate')
+
 assignment_mechanism = os.getenv('assignment_mechanism')
+if assignment_mechanism not in ['starting', 'ending', 'contains', 'overlaps']:
+    raise ValueError('Invalid assignment mechanism')
+
 #resource_object_type is the object type whose objects are to be trated as 
 #resource objects for properties in the resource perspective.
 resource_object_type = os.getenv('resource_object_type')
+
 #endtime is the event attribute that is to be treated as the end time of non-atomic events
 event_endtime_column = os.getenv('events_endtime_attribute')
+
 #start and end of the time interval over which time series are to be constructed
 int_start = pd.to_datetime(os.getenv('time_series_interval_start'), utc=True)
 int_end = pd.to_datetime(os.getenv('time_series_interval_end'), utc=True)
 
 tsa_technique = os.getenv('tsa_technique')
 
+#read inputs for the corresponding tsa technique and perform some type/value checking
 if tsa_technique == 'Change Point Detection':
     
     model = os.getenv('cp_model')
@@ -249,9 +262,6 @@ if int_end == '':
 endtimes_minutes = np.random.randint(0, 300, len(events_df)).astype('timedelta64[m]')
 events_df[event_endtime_column] = events_df[event_timestamp_column] + endtimes_hours + endtimes_minutes
 ocel_extended_df[event_endtime_column] = events_df.merge(ocel_extended_df, on=event_id_column, how='inner')[event_endtime_column]
-
-#update int_end with test endtime maximum
-int_end = events_df[event_endtime_column].max()
 atomic_evs = False
 objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df, event_to_object_relations_df,\
                                                                     events_df, event_endtime_column) """
@@ -301,21 +311,26 @@ if atomic_evs:
     pp3_dict = {}
 else:
     pp3_dict = pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
-pp4_dict = pp4(pp1_dict, pp3_dict, event_types, atomic_evs)
-pp5_dict = pp5(pp2_dict, pp4_dict, event_types)
+pp4_dict = pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+                aggregation_mode, sampling_rate)
+pp5_dict = pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+                aggregation_mode, sampling_rate)
 pp6_dict = pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
 pp7_dict = pp7(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
 
+#get all properties of the resource perspective
 rp1_dict = rp1(ep4_dict, resource_object_type)
 rp2_dict = rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, sampling_rate)
 rp3_dict = rp3(op2_dict, resource_object_type)
 
+#assign time series dicts to property ids
 property_dicts_map = {'ep1': ep1_dict, 'ep2': ep2_dict, 'ep3': ep3_dict, 'ep4': ep4_dict ,\
                 'op1': op1_dict, 'op2': op2_dict, 'op3': op3_dict, 'op4': op4_dict,\
                 'op5': op5_dict, 'op6': op6_dict, 'pp1': pp1_dict, 'pp2': pp2_dict,\
                 'pp3': pp3_dict, 'pp4': pp4_dict, 'pp5': pp5_dict, 'pp6': pp6_dict,\
                 'pp7': pp7_dict, 'rp1': rp1_dict, 'rp2': rp2_dict, 'rp3': rp3_dict}
 
+#assign property names to porperty ids
 property_names_dict = {'ep1': 'Event Frequency',\
                     'ep2': 'Event Attribute Value', \
                     'ep3': 'Number of Objects per Event', \
@@ -337,8 +352,12 @@ property_names_dict = {'ep1': 'Event Frequency',\
                     'rp2': 'Number of Active Resources',\
                     'rp3': 'Resrouce Attribute'}
 
+
 TS_collection = {}
-#process time series and plot
+#process time series by padding on both ends with null values to represent missing values 
+#then discard any time series with any null values (not only on the ends but anywhere) and assign remaining
+#to a dict called 'TS_collection' which is then used ahead. 
+#Plot all series being assigned to 'TS_collection'. Plots will be saved to 'backend/assets/plots'.
 for property, property_dict in property_dicts_map.items():
     if property_dict:
         for non_temporal_parameters, ts in property_dict.items():
@@ -350,20 +369,27 @@ for property, property_dict in property_dicts_map.items():
                     TS_collection[(property, non_temporal_parameters)] = processed_ts
                     if isinstance(non_temporal_parameters, tuple):
                         non_temporal_parameters = ', '.join(non_temporal_parameters)
-                    #ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
-                    #processed_ts.to_csv(ts_file_path)   
-                    #plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
-                    #plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
-                    #plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
-                    #plt.close()
+                    ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
+                    processed_ts.to_csv(ts_file_path)   
+                    plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
+                    plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
+                    plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
+                    plt.close()
 
 #constant time series i.e. where all time periods have the same value will not be considered for further analysis.
+#so we discard all such time series and assign remaining to a dict 'ar_ts_collection'.
 ar_ts_collection = {}
 for tsid, ts in TS_collection.items():
     if not len(ts.unique()) == 1:
         ar_ts_collection[tsid] = ts
 
 #determine range of possible seasonal periods
+#minimum seasonal period for each sampling rate is selected manually considering the shortest possible repitive pattern
+#that can probably occur in event data.
+#Maximum seasonal period is selected as 1/3rd of the time series length because a time series must contain atleast
+#a few cycles of the season to be detected. 
+#The decisions for minimum and maximum periods were taken based on a review of time series literature and discussions
+#Nevertheless, there is no absolutely 'correct' choice.
 if sampling_rate == 'W':
     series_length = (int_end - int_start) / pd.Timedelta(7,'D')
     min_seasonal_period = 4
@@ -383,8 +409,7 @@ if sampling_rate == 'YE':
 if max_seasonal_period < min_seasonal_period:
     max_seasonal_period = min_seasonal_period
 
-print(tsa_technique)
-print(tsa_params)
+#perform time series analysis and save the results to a json file available in 'backend/assets/analysis_results'
 if tsa_technique:
     ar_collection = time_series_analysis(ar_ts_collection, tsa_technique, min_seasonal_period, max_seasonal_period, sampling_rate, tsa_params)
     save_ar_to_json(ar_collection, tsa_technique)

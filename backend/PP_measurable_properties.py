@@ -4,6 +4,14 @@ import numpy as np
 import pandas as pd
 from setup import agg
 
+#Generates time series for Waiting Time for each event type in the log.
+#Gets the ending time (or timestamp if atomic) of the preceding event that ends (or occurs if atomic) the latest amongst
+# all its preceding events for each event and stores in the column 'time_latest_preceding_event'.
+#Preceding events are formally defined in the Thesis as well as described in the comments above the function
+#'preceding_events_df' in 'setup.py'.
+#Waiting time is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
+#the starting time of the event. For an event with no preceding events, it's waiting time is 0.
+#It then iterates over events of each type and generates a time series for them by calling 'pp1_iter'. 
 def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
          event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp', event_type_column = 'ocel:activity'):
 
@@ -32,6 +40,15 @@ def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 
     return pp1_dict
 
+#Generates time series for Synchronization Time for each event type in the log.
+#Gets the ending time (or timestamp if atomic) of two preceding events for each event, one that ends (or occurs if atomic) 
+#the earliest and another that ends the latest amongst all its preceding events and stores them in the columns
+#'time_earliest_preceding_event' and 'time_latest_preceding_event'.
+#Preceding events are formally defined in the Thesis as well as described in the comments above the function
+#'preceding_events_df' in 'setup.py'.
+#Synchronization time is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
+#'time_earliest_preceding_event' of the event. For an event with no preceding events, it's synchronization time is 0.
+#It then iterates over events of each type and generates a time series for them by calling 'pp2_iter'. 
 def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
          event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 
@@ -61,6 +78,10 @@ def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
         
     return pp2_dict
 
+#Generates time series for Service Time for each event type in the log. 
+#Only called if the event log contains non-atomic events.
+#Service time is determined for each event by taking a difference of the starting and ending timestamps of the event. 
+#It then iterates over events of each type and generates a time series for them by calling 'pp3_iter'. 
 def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column,\
         event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp'):
 
@@ -83,22 +104,108 @@ def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rat
         pp3_dict[event_type] = pp3_iter(event_type, svt_df)
     return pp3_dict
 
-def pp4(pp1_dict, pp3_dict, event_types, atomic_evs):
+#Generates time series for Soujourn Time for each event type in the log.
+#If the log only contains atomic events then this is exactly the same as Waiting Time i.e. pp1.
+#Else if the log contain non-atomic events then it is the sum of its service time and waiting time.
+#It gets the ending time of the preceding event that ends the latest amongst
+#all its preceding events for each event and stores in the column 'time_latest_preceding_event'.
+#Preceding events are formally defined in the Thesis as well as described in the comments above the function
+#'preceding_events_df' in 'setup.py'.
+#Soujourn is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
+#the ending time of the event. For an event with no preceding events, its soujourn time is
+#difference between its own ending and starting timestamps i.e. its service time.
+#It then iterates over events of each type and generates a time series for them by calling 'pp4_iter'. 
+def pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+        aggregation_mode, sampling_rate, event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp',\
+        event_type_column = 'ocel:activity'):
+
+    def pp4_iter(event_type, df):
+        ts_id = event_type
+        df['soujourn_time'] = df['soujourn_time'].dt.total_seconds()/3600
+        df = df.rename(columns={'soujourn_time': ts_id})
+        df = df[['assignment_mechanism_time', ts_id]]
+        df = df.set_index('assignment_mechanism_time')
+        ts = df[ts_id]
+        ts = agg(ts, aggregation_mode, sampling_rate)
+        return ts
+
     pp4_dict = {}
+    
     if atomic_evs:
         for event_type in event_types:
             pp4_dict[event_type] = pp1_dict[event_type]
     else:
+        sjt_df = preceding_events_df.copy()
+        sjt_df['time_latest_preceding_event'] = sjt_df['preceding_events_time_alltypes'].str[0]
+        sjt_df['time_latest_preceding_event'] = pd.to_datetime(sjt_df['time_latest_preceding_event'], utc=True)
+        sjt_df['soujourn_time'] = sjt_df[event_endtime_column] -  sjt_df['time_latest_preceding_event']
+        sjt_df.loc[sjt_df['time_latest_preceding_event'].isnull(), 'soujourn_time'] =\
+                                                sjt_df[event_endtime_column] -  sjt_df[event_timestamp_column]
+
         for event_type in event_types:
-            pp4_dict[event_type] = pp1_dict[event_type].add(pp3_dict[event_type])
+            type_sjt_df = sjt_df[sjt_df[event_type_column] == event_type]
+            type_sjt_df = type_sjt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp4_dict[event_type] = pp4_iter(event_type, type_sjt_df)
+
     return pp4_dict
 
-def pp5(pp2_dict, pp4_dict, event_types):
+#Generates time series for Flow Time for each event type in the log.
+#It gets the ending time of the preceding event that ends the earliest amongst
+#all its preceding events for each event and stores in the column 'time_earliest_preceding_event'.
+#Preceding events are formally defined in the Thesis as well as described in the comments above the function
+#'preceding_events_df' in 'setup.py'.
+#Flow is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
+#the ending time of the event (if events are non-atomic) or timestamp of the event (if events are atomic). 
+#For an event with no preceding events, its flow time is difference between its own ending and starting timestamps 
+#i.e., its service time if events are non-atomic else flow time is zero if atomic.
+#It then iterates over events of each type and generates a time series for them by calling 'pp5_iter'. 
+def pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+        aggregation_mode, sampling_rate, event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp',\
+        event_type_column = 'ocel:activity'):
+
+    def pp5_iter(event_type, df):
+        ts_id = event_type
+        df['flow_time'] = df['flow_time'].dt.total_seconds()/3600
+        df = df.rename(columns={'flow_time': ts_id})
+        df = df[['assignment_mechanism_time', ts_id]]
+        df = df.set_index('assignment_mechanism_time')
+        ts = df[ts_id]
+        ts = agg(ts, aggregation_mode, sampling_rate)
+        return ts
+    
     pp5_dict = {}
-    for event_type in event_types:
-        pp5_dict[event_type] = pp2_dict[event_type].add(pp4_dict[event_type])
+    
+    if atomic_evs:
+        event_time_column = event_timestamp_column
+    else:
+        event_time_column = event_endtime_column
+
+
+        ft_df = preceding_events_df.copy()
+        ft_df['time_earliest_preceding_event'] = ft_df['preceding_events_time_alltypes'].str[-1]
+        ft_df['time_earliest_preceding_event'] = pd.to_datetime(ft_df['time_earliest_preceding_event'], utc=True)
+        ft_df['flow_time'] = ft_df[event_time_column] -  ft_df['time_earliest_preceding_event']
+
+        if atomic_evs:
+            ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] = pd.Timedelta(0)
+        else:
+            ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] =\
+                                                ft_df[event_endtime_column] -  ft_df[event_timestamp_column]
+
+        for event_type in event_types:
+            type_ft_df = ft_df[ft_df[event_type_column] == event_type]
+            type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
     return pp5_dict
 
+#Generates time series for Pooling Time for each combination of event type, object type that occurs in the log.
+#For each combination (event type, object type), it filters the events of that event type and gets 
+#the ending time (or timestamp if atomic) of two of the preceding events, one that ends (or occurs if atomic) the latest 
+# and another that ends (or occurs) the earliest among all its preceding events (related via objects of that object type) 
+#for each event and stores them  in the columns 'time_latest_preceding_event_obj type' and 
+#'time_earliest_preceding_event_obj type'. Pooling time is then determined for each event by taking a difference of the two
+#aforementioned timestamps. For an event with no preceding events related by the object type of the combination, 
+#it's pooling time is 0.
 def pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate,\
         event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 
@@ -139,6 +246,16 @@ def pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggre
         
     return pp6_dict
 
+#Generates time series for Lagging Time for each combination of event type, object type that occurs in the log.
+#For each combination (event type, object type), it filters the events of that event type and gets 
+#the ending time (or timestamp if atomic) of two of the preceding events, one for the event that ends 
+#(or occurs if atomic) the latest among all its preceding events, related via objects of the combination's object type 
+# and another for the event that ends the earliest among all its preceding events, related via objects of 
+#any object type excluding the one in the combination and stores them  in the columns 
+#'time_latest_preceding_event_obj type' and 'time_earliest_preceding_event_excluding_obj type', respectively. 
+#Lagging time is then determined for each event by taking a difference of the two aforementioned timestamps. 
+#For an event with no preceding events related by objects of either the object type of the combination or any other type,
+#its lagging time is 0. If the calculated lagging time is negative, it's set to zero.
 def pp7(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate, \
         event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 

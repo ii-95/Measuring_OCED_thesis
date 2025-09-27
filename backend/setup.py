@@ -179,6 +179,13 @@ def get_event_to_object_type_relations_df_map(event_to_object_relations_df, even
 # columns with name ending in 'alltypes' contain information irrespective of object type, columns with name ending
 # in an object type contain information only with respect to that object type, whereas columns with name ending in
 # excluding_{object_type} contain information with respect to all types excluding that object type.
+
+
+# Note: The function is not easy to read as it copies many columns of a dataframe into separate lists/arrays and manipulates
+# them so it's difficult to follow but it does so to achieve a much better performance level as compared to code that 
+# would have been more readable i.e. apply functions and similar. 
+# Using pandas vectorization was not applicable/possible in this scenario.
+
 def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
                             event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
                             object_type_column = 'ocel:type'):
