@@ -107,8 +107,6 @@ def get_first_diff_order(ts_collection, max_order = 2):
     adf = StationarityADF(regression='c')  
     kpss = StationarityKPSS(regression='c')
     ts_to_diff_order_map = {}
-    j = 0
-    k = 0
     for tsid, ts in ts_collection.items():
         ts_diff = ts
         for i in range(0, max_order + 1):
@@ -185,8 +183,11 @@ def granger_causality(ts_collection, granger_params):
                 if all(p_val < p_val_thresh for p_val in p_values):
                     gc_pairs_with_lag.append((tsid, tsid_2, l))
     gc_df = pd.DataFrame(gc_pairs_with_lag, columns = ['caused', 'causing', 'lag'])
-    gc_df = gc_df.groupby(by= ['caused', 'causing']).agg(list).reset_index()
-    return gc_df
+    if gc_df.empty:
+        return None
+    else:
+        gc_df = gc_df.groupby(by= ['caused', 'causing']).agg(list).reset_index()
+        return gc_df
 
 #returns forecasts for n = 'periods_to_predict' time periods after the end of the time series for each time series in 
 #the provided collection.
@@ -210,7 +211,7 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
 
     #if any of the parameters are not provided as input, select default values
     if not periods_to_predict:
-        periods_to_predict = 3
+        periods_to_predict = 4
     if not start_p:
         start_p = 2
     if not start_q:
@@ -238,7 +239,9 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
 
     #get forecasts for each time series in the collection
     for tsid, ts in ts_collection.items():
-        ts.index = pd.PeriodIndex(ts.index, freq=sampling_rate)
+        ts_fc = ts.copy()
+        freq = sampling_rate.removesuffix('E')
+        ts_fc.index = pd.PeriodIndex(ts_fc.index, freq=freq)
         sp_list = ts_to_sp_map[tsid]
         if sp_list:
             sp_ts = sp_list[0]
@@ -247,8 +250,9 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
         forecaster = AutoARIMA(sp=sp_ts, start_p = start_p, start_q = start_q, start_P = start_P, start_Q = start_Q,\
                                 max_p = max_p, max_q = max_q, max_P = max_P, max_Q = max_Q, maxiter= maxiter,\
                                 test = test, information_criterion= information_criterion, suppress_warnings=True) 
-        forecaster.fit(ts) 
+        forecaster.fit(ts_fc) 
         pred = forecaster.predict(fh= range(1, periods_to_predict+1))
+        pred.index = pd.to_datetime(pred.index.end_time.normalize(), utc=True)
         ar_collection[tsid] = pred
     return ar_collection
 

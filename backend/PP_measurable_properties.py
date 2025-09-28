@@ -181,21 +181,22 @@ def pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, even
         event_time_column = event_endtime_column
 
 
-        ft_df = preceding_events_df.copy()
-        ft_df['time_earliest_preceding_event'] = ft_df['preceding_events_time_alltypes'].str[-1]
-        ft_df['time_earliest_preceding_event'] = pd.to_datetime(ft_df['time_earliest_preceding_event'], utc=True)
-        ft_df['flow_time'] = ft_df[event_time_column] -  ft_df['time_earliest_preceding_event']
+    ft_df = preceding_events_df.copy()
+    ft_df['time_earliest_preceding_event'] = ft_df['preceding_events_time_alltypes'].str[-1]
+    ft_df['time_earliest_preceding_event'] = pd.to_datetime(ft_df['time_earliest_preceding_event'], utc=True)
+    ft_df['flow_time'] = ft_df[event_time_column] -  ft_df['time_earliest_preceding_event']
 
-        if atomic_evs:
-            ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] = pd.Timedelta(0)
-        else:
-            ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] =\
-                                                ft_df[event_endtime_column] -  ft_df[event_timestamp_column]
+    if atomic_evs:
+        ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] = pd.Timedelta(0)
+    else:
+        ft_df.loc[ft_df['time_earliest_preceding_event'].isnull(), 'flow_time'] =\
+                                            ft_df[event_endtime_column] -  ft_df[event_timestamp_column]
 
-        for event_type in event_types:
-            type_ft_df = ft_df[ft_df[event_type_column] == event_type]
-            type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-            pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
+    for event_type in event_types:
+        type_ft_df = ft_df[ft_df[event_type_column] == event_type]
+        type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+        pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
+
     return pp5_dict
 
 #Generates time series for Pooling Time for each combination of event type, object type that occurs in the log.

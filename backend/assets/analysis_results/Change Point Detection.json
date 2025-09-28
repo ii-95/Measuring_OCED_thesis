@@ -607,49 +607,12 @@
         "tsid": [
             "op6",
             [
-                "employees",
-                "products"
-            ]
-        ],
-        "ar": [
-            22
-        ]
-    },
-    {
-        "tsid": [
-            "op6",
-            [
-                "customers",
-                "items"
-            ]
-        ],
-        "ar": [
-            31
-        ]
-    },
-    {
-        "tsid": [
-            "op6",
-            [
-                "customers",
-                "products"
-            ]
-        ],
-        "ar": [
-            31
-        ]
-    },
-    {
-        "tsid": [
-            "op6",
-            [
                 "items",
-                "products"
+                "orders"
             ]
         ],
         "ar": [
-            33,
-            36
+            31
         ]
     },
     {
@@ -669,7 +632,44 @@
             "op6",
             [
                 "items",
-                "orders"
+                "products"
+            ]
+        ],
+        "ar": [
+            33,
+            36
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "customers",
+                "items"
+            ]
+        ],
+        "ar": [
+            31
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "employees",
+                "products"
+            ]
+        ],
+        "ar": [
+            22
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "orders",
+                "products"
             ]
         ],
         "ar": [
@@ -692,7 +692,7 @@
         "tsid": [
             "op6",
             [
-                "orders",
+                "customers",
                 "products"
             ]
         ],
@@ -1126,13 +1126,6 @@
     },
     {
         "tsid": [
-            "pp5",
-            "payment reminder"
-        ],
-        "ar": []
-    },
-    {
-        "tsid": [
             "pp6",
             [
                 "confirm order",
@@ -1334,6 +1327,18 @@
             "pp7",
             [
                 "confirm order",
+                "items"
+            ]
+        ],
+        "ar": [
+            33
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "confirm order",
                 "employees"
             ]
         ],
@@ -1347,27 +1352,10 @@
             "pp7",
             [
                 "confirm order",
-                "customers"
+                "orders"
             ]
         ],
-        "ar": [
-            4,
-            9,
-            12,
-            33
-        ]
-    },
-    {
-        "tsid": [
-            "pp7",
-            [
-                "confirm order",
-                "items"
-            ]
-        ],
-        "ar": [
-            33
-        ]
+        "ar": []
     },
     {
         "tsid": [
@@ -1390,10 +1378,15 @@
             "pp7",
             [
                 "confirm order",
-                "orders"
+                "customers"
             ]
         ],
-        "ar": []
+        "ar": [
+            4,
+            9,
+            12,
+            33
+        ]
     },
     {
         "tsid": [
@@ -1503,7 +1496,7 @@
             "pp7",
             [
                 "item out of stock",
-                "products"
+                "employees"
             ]
         ],
         "ar": [
@@ -1516,7 +1509,7 @@
             "pp7",
             [
                 "item out of stock",
-                "employees"
+                "products"
             ]
         ],
         "ar": [
@@ -1554,6 +1547,20 @@
         ],
         "ar": [
             5,
+            15
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "pick item",
+                "employees"
+            ]
+        ],
+        "ar": [
+            4,
+            11,
             15
         ]
     },
@@ -1587,14 +1594,14 @@
         "tsid": [
             "pp7",
             [
-                "pick item",
-                "employees"
+                "place order",
+                "products"
             ]
         ],
         "ar": [
-            4,
-            11,
-            15
+            5,
+            20,
+            29
         ]
     },
     {
@@ -1607,20 +1614,6 @@
         ],
         "ar": [
             5
-        ]
-    },
-    {
-        "tsid": [
-            "pp7",
-            [
-                "place order",
-                "products"
-            ]
-        ],
-        "ar": [
-            5,
-            20,
-            29
         ]
     },
     {
@@ -1653,6 +1646,19 @@
             "pp7",
             [
                 "reorder item",
+                "employees"
+            ]
+        ],
+        "ar": [
+            9,
+            13
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "reorder item",
                 "products"
             ]
         ],
@@ -1675,13 +1681,22 @@
         "tsid": [
             "pp7",
             [
-                "reorder item",
-                "employees"
+                "send package",
+                "products"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "send package",
+                "items"
             ]
         ],
         "ar": [
-            9,
-            13
+            16
         ]
     },
     {
@@ -1689,10 +1704,12 @@
             "pp7",
             [
                 "send package",
-                "products"
+                "employees"
             ]
         ],
-        "ar": []
+        "ar": [
+            13
+        ]
     },
     {
         "tsid": [
@@ -1705,30 +1722,6 @@
         "ar": [
             5,
             16
-        ]
-    },
-    {
-        "tsid": [
-            "pp7",
-            [
-                "send package",
-                "items"
-            ]
-        ],
-        "ar": [
-            16
-        ]
-    },
-    {
-        "tsid": [
-            "pp7",
-            [
-                "send package",
-                "employees"
-            ]
-        ],
-        "ar": [
-            13
         ]
     },
     {

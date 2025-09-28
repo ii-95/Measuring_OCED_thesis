@@ -50,22 +50,37 @@ int_end = pd.to_datetime(os.getenv('time_series_interval_end'), utc=True)
 
 tsa_technique = os.getenv('tsa_technique')
 
+generate_visualizations = os.getenv('generate_visualizations')
+if generate_visualizations not in ['Y', 'N']:
+    generate_visualizations = 'N'
+
 #read inputs for the corresponding tsa technique and perform some type/value checking
 if tsa_technique == 'Change Point Detection':
     
     model = os.getenv('cp_model')
+
+    if not model:
+        model = 'rbf'
+    elif model not in ['rbf', 'l1', 'l2']:
+        raise ValueError('Invalid model specified for Change Point Detection')
     
     min_size = os.getenv('cp_min_size')
     if min_size:
         min_size = int(min_size)
+    else:
+        min_size = 3
     
     jump = os.getenv('cp_jump')
     if jump:
         jump = int(jump)
+    else:
+        jump = 1
     
     penalty = os.getenv('cp_penalty')
     if penalty:
         penalty = float(penalty)
+    else:
+        penalty = 1.5
     
     tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
 
@@ -91,51 +106,75 @@ elif tsa_technique == 'Forecasting':
     periods_to_predict = os.getenv('fc_periods')
     if periods_to_predict:
         periods_to_predict = int(periods_to_predict)
-    
+    else:
+        periods_to_predict = 4
+
     start_p = os.getenv('fc_start_p')
     if start_p:
         start_p = int(start_p)
-    
+    else:
+        start_p = 2
+
     start_q = os.getenv('fc_start_q')
     if start_q:
         start_q = int(start_q)
-    
+    else:
+        start_q = 2
+
     start_P = os.getenv('fc_start_P_s')
     if start_P:
         start_P = int(start_P)
-    
+    else:
+        start_P = 1
+
     start_Q = os.getenv('fc_start_Q_s')
     if start_Q:
         start_Q = int(start_Q)
-    
+    else:
+        start_Q = 1
+
     max_p = os.getenv('fc_max_p')
     if max_p:
         max_p = int(max_p)
-    
+    else:
+        max_p = 5
+
     max_q = os.getenv('fc_max_q')
     if max_q:
         max_q = int(max_q)
-    
+    else:
+        max_q = 5
+
     max_P = os.getenv('fc_max_P_s')
     if max_P:
         max_P = int(max_P)
-    
+    else:
+        max_P = 2
+
     max_Q = os.getenv('fc_max_Q_s')
     if max_Q:
         max_Q = int(max_Q)
-    
+    else:
+        max_Q = 2
+
     information_criterion = os.getenv('fc_information_criterion')
-    if information_criterion not in ['aicc', 'aic', 'bic', 'hqic', 'oob', '', None]:
+    if not information_criterion:
+        information_criterion = 'aicc'
+    elif information_criterion not in ['aicc', 'aic', 'bic', 'hqic', 'oob']:
         raise ValueError('Invalid information criterion specified for forecasting')
     
     test = os.getenv('fc_test')
-    if test not in ['adf', 'kpss', 'pp', '', None]:
+    if not test:
+        test = 'kpss'
+    elif test not in ['adf', 'kpss', 'pp']:
         raise ValueError('Invalid test specified for forecasting')
     
     maxiter = os.getenv('fc_maxiter')
     if maxiter:
         maxiter = int(maxiter)
-    
+    else:
+        maxiter = 100
+        
     tsa_params = {'periods_to_predict': periods_to_predict, 'start_p': start_p, 'start_q': start_q, 'start_P': start_P,\
                     'start_Q': start_Q, 'max_p': max_p, 'max_q': max_q, 'max_P': max_P, 'max_Q': max_Q,\
                     'information_criterion': information_criterion, 'test': test, 'maxiter': maxiter}
@@ -284,8 +323,8 @@ objects_to_time_df = get_objects_to_time_df(objects_summary_df.copy(), time_inte
 object_types_to_df_map = get_object_types_to_df_map(objects_df.copy(), object_changes_df.copy(), object_types)
 event_types_to_df_map = get_event_types_to_df_map(events_df.copy(), event_types, atomic_evs, event_endtime_column)
 
-event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_df_map.copy())
-object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df.copy(), object_types_to_df_map.copy())
+event_object_count_df_map = get_event_object_count_df_map(ocel, event_types_to_df_map)
+object_type_summary_df_map = get_object_type_summary_df_map(objects_summary_df.copy(), object_types_to_df_map)
 
 #get preceding events df for performance perspective properties
 preceding_events_df = get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column)
@@ -367,21 +406,22 @@ for property, property_dict in property_dicts_map.items():
                     .drop(columns=0).iloc[:,0]
                 if not processed_ts.isna().any():
                     TS_collection[(property, non_temporal_parameters)] = processed_ts
-                    if isinstance(non_temporal_parameters, tuple):
-                        non_temporal_parameters = ', '.join(non_temporal_parameters)
                     ts_file_path = str(Path(f'backend/assets/timeseries/{property}_{non_temporal_parameters}.csv').resolve())
-                    processed_ts.to_csv(ts_file_path)   
-                    plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
-                    plot_series(processed_ts, title=f'{property_names_dict[property]} for inputs ({non_temporal_parameters})')
-                    plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
-                    plt.close()
+                    processed_ts.to_csv(ts_file_path) 
+                    if generate_visualizations == 'Y':
+                        if isinstance(non_temporal_parameters, tuple):
+                            non_temporal_parameters = ', '.join(non_temporal_parameters)  
+                        plot_file_path = str(Path(f'backend/assets/plots/{property}_{non_temporal_parameters}.png').resolve())
+                        plot_series(processed_ts, title=f'Property: {property_names_dict[property]}, \n Non-Temporal Parameters: ({non_temporal_parameters})')
+                        plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
+                        plt.close()
 
 #constant time series i.e. where all time periods have the same value will not be considered for further analysis.
 #so we discard all such time series and assign remaining to a dict 'ar_ts_collection'.
 ar_ts_collection = {}
 for tsid, ts in TS_collection.items():
     if not len(ts.unique()) == 1:
-        ar_ts_collection[tsid] = ts
+        ar_ts_collection[tsid] = ts.copy()
 
 #determine range of possible seasonal periods
 #minimum seasonal period for each sampling rate is selected manually considering the shortest possible repitive pattern
@@ -411,5 +451,16 @@ if max_seasonal_period < min_seasonal_period:
 
 #perform time series analysis and save the results to a json file available in 'backend/assets/analysis_results'
 if tsa_technique:
-    ar_collection = time_series_analysis(ar_ts_collection, tsa_technique, min_seasonal_period, max_seasonal_period, sampling_rate, tsa_params)
-    save_ar_to_json(ar_collection, tsa_technique)
+    if ar_ts_collection:
+        ar_collection = time_series_analysis(ar_ts_collection, tsa_technique, min_seasonal_period,\
+                                                max_seasonal_period, sampling_rate, tsa_params)
+        if isinstance(ar_collection, dict) and not ar_collection:
+            print('No analysis results produced')
+        elif isinstance(ar_collection, pd.DataFrame) and ar_collection.empty:
+            print('No analysis results produced')
+        else:
+            save_ar_to_json(ar_collection, tsa_technique)
+            if generate_visualizations == 'Y':
+                visualize_analysis_results(ar_ts_collection, ar_collection, tsa_technique, tsa_params, property_names_dict)
+    else:
+        print('None of the time series qualify for analysis')

@@ -5,27 +5,33 @@ The project can be considered to consist of 3 components:
 
 1. Extraction of time series of measurable properties from an OCEL
 
-2. Perform time series analysis on the extracted time series (available techniques are Change Point Detection, Forecasting,
-Granger Causality, Threshold Based Point Detection)
+    Output: Time series .csv files (availabile in backend/assets/timeseries) and plots (availabile in backend/assets/plots).
+
+2. Perform time series analysis on the extracted time series (available techniques are Change Point Detection, Forecasting, Granger Causality, Threshold Based Point Detection).
+
+    Output: Analysis results (available in assets/analysis_results) and analysis results visualization (available in assets/analysis_results_plots)
 
 3. Convert analysis results into OCED and update the input OCEL with the results.
 
-The first component is complete and functional. The second component is complete except for the visualizations which are yet to be implemented but is already functional and produces analysis results in .json format. Working on the 3rd component will soon commence.
+    Output: A modified OCEL containing all event data in input OCEL as well as analysis results encoded as OCED.
+
+The implementation of the first and second component is complete and they are already functional. Working on the 3rd component will commence soon.
 
 Once all components are complete, a frontend will be developed.
-
 
 The project requires python and can be run by following the steps below:
 
 1) Install required packages contained within /requirements.txt using tool of choice. Ideally use Python 3.11 to avoid dependency conflicts. 
 
-2) Configure user inputs in /inputs.env. Fields which require you to choose from options have the options mentioned above them in the inputs.env file.
+2) Configure user inputs in /inputs.env. These include the OCEL filepath, time series parameters (such as sampling rate, aggregation function, etc) as well as a tsa technique and associated parameters.  Fields which require you to choose from options have the options mentioned above them in the inputs.env file.
 
 3) Run the script /backend/main.py
 
 Furthermore, please note the following:
 
-- The output is a bunch of time series, found as .csv files in /backend/assets/timeseries and the corresponding plots can be found in /backend/assets/plots. Furthermore, the project provides results of time series analysis, available as .json files in /backend/assets/analysis_results. Soon the functionality for generating visualizations of the analysis results will also be added.
+- Runtime varies significantly depending on the selected analysis technique and parameters. Change Point Detection and Threshold Based Point Detection run rather quickly (few seconds to less than a minute). Forecasting and especially Granger Causality take a siginficant amount of  time to run (ranging from atleast a minute to several minutes) with the default parameter configuration.
+
+- The outputs for the default config (as well as for each tsa technique) with the ocel: https://zenodo.org/records/8428112 as found in inputs.env are already present in backend/assets. If you want to try a different configuration then follow the steps above.
 
 - The analysis results are json files containing key,value pairs where the keys are time series identifier and the values contain the analysis results for that time series.
 An informal specification of the format for .json analysis results file for each analysis technique is as follows (improvements may follow):
@@ -46,17 +52,13 @@ An informal specification of the format for .json analysis results file for each
 
         tsid: [property_id, non-temporal parameters], 
 
-        ar:  {(a map of timestamp and float values that represent a series of forecast values for a given number of time periods)}
+        ar:  {(a map of timestamps (iso string format) and float values that represent a series of forecast values for a given number of time periods)}
 
     - Granger Causality:
 
         tsid: [property_id, non-temporal parameters], 
 
-        ar:  [(list of pairs where pair contains the identifier of a time series and a list of integers representing the lags by which the time series granger causes the time series in the key i.e. tsid)]
-
-- Runtime varies significantly depending on the selected analysis technique and parameters. Change Point Detection and Threshold Based Point Detection run rather quickly (few seconds to less than a minute). Forecasting and especially Granger Causality take a siginficant amount of  time to run (ranging from atleast a minute to several minutes) with the default parameter configuration.
-
-- The outputs for the default config (as well as for each tsa technique) with the ocel: https://zenodo.org/records/8428112 as found in inputs.env are already present in backend/assets. If you want to try a different configuration then follow the steps above.
+        ar:  [(list of pairs where each pair contains the identifier of a time series and a list of integers representing the lags by which that time series granger causes the time series whose identifier is the key i.e. tsid)]
 
 - Time series with null values during any of the time periods within the provided interval (in inputs.env) are discarded before plotting (and not used ahead either). Furthermore, any time series with constant values across all time intervals, even though plotted will not be used for time series analysis. 
 

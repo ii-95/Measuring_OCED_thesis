@@ -2,4 +2,3 @@ backend/testing.ipynb
 .vscode/settings.json
 backend/inputs.env
 *.pyc
-/backend/assets/analysis_results_plots

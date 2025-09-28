@@ -7,6 +7,10 @@ import itertools
 import json
 from pathlib import Path
 import os
+from sktime.utils.plotting import plot_series
+import matplotlib.pyplot as plt
+import rustworkx as rx
+from rustworkx.visualization import graphviz_draw
 
 def agg(series, aggregation_mode, sampling_rate):
     if type(series) == pd.Series:
@@ -534,18 +538,17 @@ def save_ar_to_json(ar_collection, technique_name):
     ar_file_path = str(Path(f'backend/assets/analysis_results/{technique_name}.json').resolve())
     if technique_name in ['Change Point Detection', 'Forecasting', 'Threshold Based Point Detection']:
         if technique_name == 'Forecasting':
-            json_ar_collection = {}
-            ar_collection_copy = ar_collection.copy()
-            for tsid, ar_series in ar_collection_copy.items():
-                ar_series.index = pd.to_datetime(ar_series.index.end_time.normalize(), utc=True)
+            processed_ar_collection = {}
+            for tsid, ar in ar_collection.items():
+                ar_series = ar.copy()
                 ar_series.index = ar_series.index.map(lambda x: x.isoformat())
-                ar = ar_series.to_dict()
-                json_ar_collection[tsid] = ar
+                ar_series = ar_series.to_dict()
+                processed_ar_collection[tsid] = ar_series
         else:
-            json_ar_collection = ar_collection.copy()
+            processed_ar_collection = ar_collection
 
         with open(ar_file_path, 'w', encoding='utf-8') as f:
-            json.dump(remap_keys(json_ar_collection), f, indent=4, ensure_ascii=False)
+            json.dump(remap_keys(processed_ar_collection), f, indent=4, ensure_ascii=False)
 
     elif technique_name == 'Granger Causality':
         df = pd.DataFrame(ar_collection[['caused']].values.tolist()).rename(columns = {0 : 'tsid' })
@@ -556,17 +559,16 @@ def save_ar_to_json(ar_collection, technique_name):
 def convert_ar_to_json(ar_collection, technique_name):
     if technique_name in ['Change Point Detection', 'Forecasting', 'Threshold Based Point Detection']:
         if technique_name == 'Forecasting':
-            ar_collection_copy = ar_collection.copy()
-            json_ar_collection = {}
-            for tsid, ar_series in ar_collection_copy.items():
-                ar_series.index = pd.to_datetime(ar_series.index.end_time.normalize(), utc=True)
+            processed_ar_collection = {}
+            for tsid, ar in ar_collection.items():
+                ar_series = ar.copy()
                 ar_series.index = ar_series.index.map(lambda x: x.isoformat())
-                ar = ar_series.to_dict()
-                json_ar_collection[tsid] = ar
+                ar_series = ar_series.to_dict()
+                processed_ar_collection[tsid] = ar_series
         else:
-            json_ar_collection = ar_collection.copy()
+            processed_ar_collection = ar_collection
         
-        json_ar_collection = json.dumps(remap_keys(json_ar_collection), indent=4, ensure_ascii=False)
+        json_ar_collection = json.dumps(remap_keys(processed_ar_collection), indent=4, ensure_ascii=False)
 
     elif technique_name == 'Granger Causality':
         df = pd.DataFrame(ar_collection[['caused']].values.tolist()).rename(columns = {0 : 'tsid' })
@@ -576,3 +578,68 @@ def convert_ar_to_json(ar_collection, technique_name):
     
     return json_ar_collection
 
+def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa_params, property_names_dict):
+    tsa_params_str = json.dumps(tsa_params)
+    if technique_name in ['Change Point Detection', 'Threshold Based Point Detection']:
+        for tsid, ts in ts_collection.items():
+            property = tsid[0]
+            non_temporal_parameters = tsid[1]
+            if isinstance(non_temporal_parameters, tuple):
+                non_temporal_parameters = ', '.join(non_temporal_parameters)
+            ar = ar_collection[tsid].copy()
+            plot_title = f'Analysis results for tsa technique: {technique_name},\n tsa parameters: {tsa_params_str}, \n\
+            property: {property_names_dict[property]}, and non-temporal parameters : ({non_temporal_parameters})'
+            fig, ax = plot_series(ts, title=plot_title)
+            for index in ar:
+                ax.axvline(ts.index[index], color="tab:green", linestyle="--")
+            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
+            plt.savefig(ar_viz_file_path, bbox_inches='tight', dpi = 200)
+            plt.close()
+    
+    elif technique_name == 'Forecasting':
+        for tsid, ts in ts_collection.items():
+            property = tsid[0]
+            non_temporal_parameters = tsid[1]
+            if isinstance(non_temporal_parameters, tuple):
+                non_temporal_parameters = ', '.join(non_temporal_parameters)
+            ar = ar_collection[tsid].copy()
+            plot_title = f'analysis results for tsa technique: {technique_name},\n tsa parameters: {tsa_params_str}, \n\
+            property: {property_names_dict[property]}, and non-temporal parameters : ({non_temporal_parameters})'
+            plot_series(ts, ar, title = plot_title)
+            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
+            plt.savefig(ar_viz_file_path, bbox_inches='tight', dpi = 200)
+            plt.close()
+    
+    elif technique_name == 'Granger Causality':
+        gc_df = ar_collection
+        caused_tsid = gc_df['caused'].unique()
+
+        for tsid in caused_tsid:
+            property = tsid[0]
+            non_temporal_parameters = tsid[1]
+            if isinstance(non_temporal_parameters, tuple):
+                non_temporal_parameters = ', '.join(non_temporal_parameters)
+            idx_tuples = []
+            graph = rx.PyDiGraph()
+            caused_df = gc_df[gc_df['caused'] == tsid]
+            causing_arr = caused_df['causing'].values.tolist()
+            lag_arr = caused_df['lag'].values.tolist()
+            causing_idx = graph.add_nodes_from(list(causing_arr))
+            caused_idx = graph.add_node(tsid)
+            for idx in causing_idx:
+                idx_tuples.append((idx, caused_idx, lag_arr[idx]))
+            graph.add_edges_from(idx_tuples)
+
+            def node_attr(node):
+                if node == tsid:
+                    return {'label': ', '.join(map(str, node)).replace('\'',''),'color': 'black', 'fillcolor': 'lightblue', 'style': 'filled'}
+                else:
+                    return {'label': ', '.join(map(str, node)).replace('\'',''), 'color': 'black', 'fillcolor': 'grey', 'style': 'filled'}
+
+            def edge_attr(edge):
+                return {'label': ', '.join(map(str, edge))}
+            
+            #plot_title = f'analysis results for tsa technique: {technique_name}, tsa parameters: {tsa_params_str}, property: {property}, and non-temporal parameters : ({non_temporal_parameters})'
+            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
+            graphviz_draw(graph, node_attr_fn=node_attr, edge_attr_fn=edge_attr, method='dot', graph_attr = {'rankdir': 'LR'})\
+            .save(ar_viz_file_path, format='png')
