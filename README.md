@@ -21,7 +21,7 @@ Once all components are complete, a frontend will be developed.
 
 The project requires python and can be run by following the steps below:
 
-1) Install required packages contained within /requirements.txt using tool of choice. Ideally use Python 3.11 to avoid dependency conflicts. 
+1) Install required packages contained within /requirements.txt using tool of choice. Ideally use Python 3.11 to avoid dependency conflicts. If Granger Causality is the selected TSA technique, you must have Graphviz installed on your system to generate the visualizations. See https://graphviz.org/download/#executable-packages for installation instructions. Otherwise, you can disable the option for visualizations in inputs.env i.e., set generate_visualizations=N. 
 
 2) Configure user inputs in /inputs.env. These include the OCEL filepath, time series parameters (such as sampling rate, aggregation function, etc) as well as a tsa technique and associated parameters.  Fields which require you to choose from options have the options mentioned above them in the inputs.env file.
 
