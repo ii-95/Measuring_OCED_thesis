@@ -33,7 +33,8 @@ Furthermore, please note the following:
 
 - The outputs for the default config (as well as for each tsa technique) with the ocel: https://zenodo.org/records/8428112 as found in inputs.env are already present in backend/assets. If you want to try a different configuration then follow the steps above.
 
-- The analysis results are json files containing key,value pairs where the keys are time series identifier and the values contain the analysis results for that time series.
+- The analysis results are json files containing lists of (tsid, ar) pairs where 'tsid' is the time series identifier (property name, non-temporal parameters) and ar contain the analysis results for that time series.
+
 An informal specification of the format for .json analysis results file for each analysis technique is as follows (improvements may follow):
 
     - Change Point Detection:
