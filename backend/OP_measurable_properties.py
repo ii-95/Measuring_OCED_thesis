@@ -1,5 +1,3 @@
-import pm4py
-import pandas as pd
 import numpy as np
 import pandas as pd
 from pandas.api.types import is_any_real_numeric_dtype
@@ -62,9 +60,9 @@ def op2(object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_r
                 attr_df = attr_df.merge(objects_to_time_df, on = object_id_column, how='inner')
                 #only keep those rows where attribute to object assignment timestamp is less than object to time period
                 #assignment timestamp
-                attr_df = attr_df[attr_df[timestamp_column] < attr_df['assignment_mechanism_time']]
+                attr_df = attr_df[attr_df[timestamp_column] <= attr_df['assignment_mechanism_time']]
                 #get latest value of attribute for each object at end of each time interval
-                attr_df = attr_df.groupby([object_id_column, 'assignment_mechanism_time']).max(timestamp_column)
+                attr_df = attr_df.sort_values(by='ocel:timestamp').groupby([object_id_column, 'assignment_mechanism_time']).tail(1)
                 attr_df = attr_df.reset_index()
                 # Call function 'op2_iter' for each combination of an object type and one of it's numerical attributes
                 # to produce a dictionary that maps the time series attribute values. 

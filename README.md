@@ -13,11 +13,9 @@ The project can be considered to consist of 3 components:
 
 3. Convert analysis results into OCED and update the input OCEL with the results.
 
-    Output: A modified OCEL containing all event data in input OCEL as well as analysis results encoded as OCED.
+    Output: A modified OCEL containing all event data in input OCEL as well as analysis results encoded as OCED. This can be used again as input to the tool. You can either select different analysis techniques each time with no connection to prior results or you can select some of the given options in the .env file that enable the usage of prior analysis results to generate a higher level analysis.
 
-The implementation of the first and second component is complete and they are already functional. Working on the 3rd component will commence soon.
-
-Once all components are complete, a frontend will be developed.
+The implementation of all 3 components is complete and the tool can be used via command line. Work on the front/UI will commence soon.
 
 The project requires python and can be run by following the steps below:
 
@@ -30,8 +28,6 @@ The project requires python and can be run by following the steps below:
 Furthermore, please note the following:
 
 - Runtime varies significantly depending on the selected analysis technique and parameters. Change Point Detection and Threshold Based Point Detection run rather quickly (few seconds to less than a minute). Forecasting and especially Granger Causality take a siginficant amount of  time to run (ranging from atleast a minute to several minutes) with the default parameter configuration.
-
-- The outputs for the default config (as well as for each tsa technique) with the ocel: https://zenodo.org/records/8428112 as found in inputs.env are already present in backend/assets. If you want to try a different configuration then follow the steps above.
 
 - The analysis results are json files containing lists of (tsid, ar) pairs where 'tsid' is the time series identifier (property name, non-temporal parameters) and ar contain the analysis results for that time series.
 

@@ -9,8 +9,8 @@ import contextlib
 #parent function for time series analysis
 #redirects to specific function for the selected tsa technique after pre-preprocessing of time series, if needed.
 #e.g. making time series stationary in case of granger causality or finding seasonal periods in case of forecasting
-def time_series_analysis(ts_collection, technique_name, min_seasonal_period, max_seasonal_period, sampling_rate,\
-                        tsa_params = None):
+def time_series_analysis(ts_collection, technique_name, min_seasonal_period, max_seasonal_period, sampling_rate, offset,\
+                        change_point_indices_dict, ts_causal_factors_dict, time_intervals, tsa_params = None):
 
     if technique_name == 'Change Point Detection':
         ar_collection = change_point_detection(ts_collection, tsa_params)
@@ -19,10 +19,11 @@ def time_series_analysis(ts_collection, technique_name, min_seasonal_period, max
         seasonal_diff_ts_collection = apply_seasonal_differencing(ts_collection, ts_to_sp_map)
         ts_to_diff_order_map = get_first_diff_order(seasonal_diff_ts_collection)
         diff_ts_collection = apply_first_differencing(seasonal_diff_ts_collection, ts_to_diff_order_map)
-        ar_collection = granger_causality(diff_ts_collection, tsa_params)
+        ar_collection = granger_causality(diff_ts_collection, change_point_indices_dict, tsa_params)
     elif technique_name == 'Forecasting':
         ts_to_sp_map = get_seasonal_periodicities(ts_collection, min_seasonal_period, max_seasonal_period)
-        ar_collection = forecasting(ts_collection, ts_to_sp_map, sampling_rate, tsa_params)
+        ar_collection = forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, \
+                                    ts_causal_factors_dict, time_intervals, tsa_params)
     elif technique_name == 'Threshold Based Point Detection':
         ar_collection = threshold_based_point_detection(ts_collection, tsa_params)
     return ar_collection
@@ -74,16 +75,19 @@ def change_point_detection(ts_collection, change_point_params):
 def get_seasonal_periodicities(ts_collection, min_seasonal_period, max_seasonal_period):
     ts_to_sp_map = {}
     for tsid, ts in ts_collection.items():
-        prev_sp = max_seasonal_period*2 + 1 
-        sp_list = []
-        seasonal_diff_ts = ts
-        sp_candidates = range(max_seasonal_period, min_seasonal_period, -1)
-        for sp in sp_candidates:
-            ocsb_test = OCSBTest(sp)
-            if ocsb_test.estimate_seasonal_differencing_term(seasonal_diff_ts) and sp < prev_sp/2:
-                seasonal_diff_ts = seasonal_diff_ts.diff(sp).dropna()
-                sp_list.append(sp)
-                prev_sp = sp
+        if tsid[0].startswith('Threshold Based Points'):
+            sp_list = []
+        else:
+            prev_sp = max_seasonal_period*2 + 1 
+            sp_list = []
+            seasonal_diff_ts = ts.copy()
+            sp_candidates = range(max_seasonal_period, min_seasonal_period, -1)
+            for sp in sp_candidates:
+                ocsb_test = OCSBTest(sp)
+                if ocsb_test.estimate_seasonal_differencing_term(seasonal_diff_ts) and sp < prev_sp/2:
+                    seasonal_diff_ts = seasonal_diff_ts.diff(sp).dropna()
+                    sp_list.append(sp)
+                    prev_sp = sp
         ts_to_sp_map[tsid] = sp_list
     return ts_to_sp_map
 
@@ -92,7 +96,7 @@ def get_seasonal_periodicities(ts_collection, min_seasonal_period, max_seasonal_
 def apply_seasonal_differencing(ts_collection, ts_to_sp_map):
     seasonal_diff_ts_collection = {}
     for tsid, ts in ts_collection.items():
-        seasonal_diff_ts = ts
+        seasonal_diff_ts = ts.copy()
         for sp in ts_to_sp_map[tsid]:
             seasonal_diff_ts = seasonal_diff_ts.diff(sp).dropna()
         seasonal_diff_ts_collection[tsid] = seasonal_diff_ts
@@ -108,19 +112,21 @@ def get_first_diff_order(ts_collection, max_order = 2):
     kpss = StationarityKPSS(regression='c')
     ts_to_diff_order_map = {}
     for tsid, ts in ts_collection.items():
-        ts_diff = ts
-        for i in range(0, max_order + 1):
-            adf_result = adf.fit(ts_diff).get_fitted_params()["stationary"]
-            kpss_result = kpss.fit(ts_diff).get_fitted_params()["stationary"]
-            if adf_result and kpss_result:
-                ts_to_diff_order_map[tsid] = i
-                break
-            else:
-                if i < max_order:
-                    ts_diff = ts_diff.diff(1).dropna()
+        if tsid[0].startswith('Threshold Based Points'):
+            ts_to_diff_order_map[tsid] = 0
+        else:
+            ts_diff = ts.copy()
+            for i in range(0, max_order + 1):
+                adf_result = adf.fit(ts_diff).get_fitted_params()["stationary"]
+                kpss_result = kpss.fit(ts_diff).get_fitted_params()["stationary"]
+                if adf_result and kpss_result:
+                    ts_to_diff_order_map[tsid] = i
+                    break
                 else:
-                    print(tsid)
-                    print('Above time series can not be made stationary after second order differencing, hence will be discarded for the purpose of further analysis.')
+                    if i < max_order:
+                        ts_diff = ts_diff.diff(1).dropna()
+                    else:
+                        print(f'Time series: {tsid} can not be made stationary after second order differencing, hence will be discarded for the purpose of further analysis.')
     return ts_to_diff_order_map
 
 #apply first differencing to each time series in a collection according to the order of first differencing
@@ -129,7 +135,7 @@ def get_first_diff_order(ts_collection, max_order = 2):
 def apply_first_differencing(ts_collection, ts_to_diff_order_map):
     diff_ts_collection = {}
     for tsid, diff_order in ts_to_diff_order_map.items():
-        ts_diff = ts_collection[tsid]
+        ts_diff = ts_collection[tsid].copy()
         if diff_order > 0:
             for i in range(0,diff_order):
                 ts_diff = ts_diff.diff(1).dropna()
@@ -145,11 +151,12 @@ def apply_first_differencing(ts_collection, ts_to_diff_order_map):
 #Returns a dataframe containing each combination of time series where granger causality is detected and the corresponding
 #lags.
 
-def granger_causality(ts_collection, granger_params):
+def granger_causality(ts_collection, change_point_indices_dict, granger_params):
 
     #get selected values of parameters
     lag = granger_params['lag']
     p_val_thresh = granger_params['p_value_threshold']
+    use_change_point_difference_as_lag = granger_params['use_change_point_difference_as_lag']
 
     #if p_value is not provided, select default p_value
     if not p_val_thresh:
@@ -158,12 +165,23 @@ def granger_causality(ts_collection, granger_params):
     gc_pairs_with_lag = []
 
     for tsid, ts in ts_collection.items():
-        ts_df = ts.to_frame()
+        ts_df = ts.copy().to_frame()
         other_ts_collection = {k: v for k, v in ts_collection.items() if k != tsid}
         for tsid_2, ts_2 in other_ts_collection.items():
             df = ts_df.merge(ts_2, left_index = True, right_index = True, how = 'left').dropna()
             lag_limit = math.floor((len(df)-1) / 3 - 1)
-            if not lag:
+            if use_change_point_difference_as_lag == 'Y':
+                lag_list = []
+                caused_cp = change_point_indices_dict[tsid]
+                causing_cp = change_point_indices_dict[tsid_2]
+                for cp in caused_cp:
+                    for cp_2 in causing_cp:
+                        possible_lag = cp - cp_2
+                        if possible_lag > 0 and possible_lag <= lag_limit:
+                            lag_list.append(possible_lag)
+                if not lag_list:
+                    continue
+            elif not lag:
                 lag_list = range(1,lag_limit+1)
             elif isinstance(lag, list):
                 lag_list = [x for x in lag if x <= lag_limit]
@@ -174,8 +192,13 @@ def granger_causality(ts_collection, granger_params):
                     lag_list = range(1,lag_limit+1)
                 else:
                     lag_list = range(1,lag+1)
-            with contextlib.redirect_stdout(None):
-                gc = grangercausalitytests(df, maxlag=lag_list)
+            try:
+                with contextlib.redirect_stdout(None):
+                    gc = grangercausalitytests(df, maxlag=lag_list)
+            except Exception as err:
+                print(tsid, tsid_2)
+                print(f'Warning: Cannot perform Granger Causality test for: ({tsid}, {tsid_2}) due to the following error: \n {err} \n the time series pair will be discarded from the results')
+                continue
             for l in lag_list:
                 p_values = []
                 for value in gc[l][0].values():
@@ -193,10 +216,11 @@ def granger_causality(ts_collection, granger_params):
 #the provided collection.
 #Uses an ARIMA model to generate the predictions. seasonal periods for each time series are provided as an input to the
 #function.
-def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
+def forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, ts_causal_factors_dict, time_intervals, forecasting_params):
 
     #get selected values of parameters
     periods_to_predict = forecasting_params['periods_to_predict']
+    use_granger_causal_ts_as_exogenous_variables = forecasting_params['use_granger_causal_ts_as_exogenous_variables']
     start_p = forecasting_params['start_p']
     max_p = forecasting_params['max_p']
     start_q = forecasting_params['start_q']
@@ -212,6 +236,8 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
     #if any of the parameters are not provided as input, select default values
     if not periods_to_predict:
         periods_to_predict = 4
+    if not use_granger_causal_ts_as_exogenous_variables: 
+        use_granger_causal_ts_as_exogenous_variables = 'N'
     if not start_p:
         start_p = 2
     if not start_q:
@@ -235,12 +261,14 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
     if not maxiter:
         maxiter = 100
 
+    interimn_ar_collection = {}
     ar_collection = {}
+    freq = sampling_rate.removesuffix('E')
+
 
     #get forecasts for each time series in the collection
     for tsid, ts in ts_collection.items():
         ts_fc = ts.copy()
-        freq = sampling_rate.removesuffix('E')
         ts_fc.index = pd.PeriodIndex(ts_fc.index, freq=freq)
         sp_list = ts_to_sp_map[tsid]
         if sp_list:
@@ -253,7 +281,44 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, forecasting_params):
         forecaster.fit(ts_fc) 
         pred = forecaster.predict(fh= range(1, periods_to_predict+1))
         pred.index = pd.to_datetime(pred.index.end_time.normalize(), utc=True)
-        ar_collection[tsid] = pred
+        interimn_ar_collection[tsid] = pred
+
+    if use_granger_causal_ts_as_exogenous_variables == 'Y':
+        pred_intervals = []
+        for i in range (1, periods_to_predict+1):
+            pred_intervals.append(time_intervals[-1].right + i * offset)
+            pred_intervals
+        for tsid, ts in ts_collection.items():
+            if not tsid in ts_causal_factors_dict.keys():
+                ar_collection[tsid] = interimn_ar_collection[tsid]
+            else:
+                causing_ts = ts_causal_factors_dict[tsid]
+                causing_df = pd.DataFrame(index=time_intervals.right)
+                pred_causing_df = pd.DataFrame(index=pred_intervals)
+                for causing_tsid in causing_ts:
+                    causing_df[causing_tsid] = ts_collection[causing_tsid].copy()
+                    pred_causing_df[causing_tsid] = interimn_ar_collection[causing_tsid].copy()
+                ts_fc = ts.copy()
+                ts_fc.index = pd.PeriodIndex(ts_fc.index, freq=freq)
+                exo_df = causing_df
+                exo_df.index = pd.PeriodIndex(exo_df.index, freq=freq)
+                pred_exo_df = pred_causing_df
+                pred_exo_df.index = pd.PeriodIndex(pred_exo_df.index, freq=freq)
+                sp_list = ts_to_sp_map[tsid]
+                if sp_list:
+                    sp_ts = sp_list[0]
+                else:
+                    sp_ts = 1
+                forecaster = AutoARIMA(sp=sp_ts, start_p = start_p, start_q = start_q, start_P = start_P, start_Q = start_Q,\
+                                    max_p = max_p, max_q = max_q, max_P = max_P, max_Q = max_Q, maxiter= maxiter,\
+                                    test = test, information_criterion= information_criterion, suppress_warnings=True) 
+                forecaster.fit(y=ts_fc, X=exo_df) 
+                pred = forecaster.predict(fh=range(1, periods_to_predict+1), X=pred_exo_df)
+                pred.index = pd.to_datetime(pred.index.end_time.normalize(), utc=True)
+                ar_collection[tsid] = pred
+    else:
+        ar_collection = interimn_ar_collection
+
     return ar_collection
 
 #returns a list of indices for each time series that qualify a criteria according to the given parameters. 
@@ -285,7 +350,7 @@ def threshold_based_point_detection(ts_collection, threshold_params):
 
     for tsid, ts in ts_collection.items():
         if mode == 'quantile':
-            ts_df = ts.reset_index()
+            ts_df = ts.copy().reset_index()
             if comparison_operator == 'between':
                 bool_sr = ts_df[ts_df.columns[-1]].between(ts_df.quantile(q=threshold_1).iloc[1], ts_df.quantile(q=threshold_2).iloc[1])
             elif comparison_operator == 'greater or equal to':

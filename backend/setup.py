@@ -51,6 +51,10 @@ def get_ocel_extended_df(ocel):
     ocel_extended_df = ocel.get_extended_table()
     return ocel_extended_df
 
+def get_o2o_df(ocel):
+    o2o_df = ocel.o2o
+    return o2o_df
+
 #if non-atomic events exist in the log, then fill in endtimes for any possible atomic events 
 # in the log (those with null/empty values in endtine column) with their starting time.
 def adjust_events_end_time(events_df, event_endtime_column, event_timestamp_column = 'ocel:timestamp'):
@@ -325,9 +329,18 @@ def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_en
             preceding_events_df[f'preceding_events_time_excluding_{object_type}'] = preceding_events_endtime_excluding_type_arr_dict[object_type]
     return preceding_events_df
 
+def get_offset_for_sampling_rate(sampling_rate):
+    if sampling_rate == 'W':
+        offset = pd.tseries.offsets.Week(weekday=6, normalize=True)
+    elif sampling_rate == 'ME':
+        offset = pd.tseries.offsets.MonthEnd(0, normalize=True)
+    elif sampling_rate == 'QE':
+        offset = pd.tseries.offsets.QuarterEnd(0, normalize=True)
+    elif sampling_rate == 'YE':
+        offset = pd.tseries.offsets.YearEnd(0, normalize=True)
+    return offset
 #get list of time intervals according to the specified time interval and sampling rate
-def get_time_intervals(start_time, end_time, sampling_rate):
-    offset = pd.tseries.frequencies.to_offset(sampling_rate)
+def get_time_intervals(start_time, end_time, sampling_rate, offset):
     start = (start_time - offset).normalize()
     end = (end_time + offset).normalize()
     time_intervals = pd.interval_range(start, end, freq=sampling_rate)
@@ -486,6 +499,7 @@ def get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechan
     elif assignment_mechanism == 'overlaps':
         objs_to_time_df = get_overlapping_objects(ti_cross_objs_df)
         objs_to_time_df = objs_to_time_df[[object_id_column, 'time_interval_right']]
+        objs_to_time_df['time_interval_right'] = objs_to_time_df['time_interval_right']
         objs_to_time_df = objs_to_time_df\
             .rename(columns={'time_interval_right': 'assignment_mechanism_time'})
 
@@ -524,12 +538,29 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
         elif assignment_mechanism == 'overlaps':
             evs_to_time_df = get_overlapping_events(ti_cross_evs_df, event_endtime_column)
             evs_to_time_df = evs_to_time_df[[event_id_column, 'time_interval_right']]
+            evs_to_time_df['time_interval_right'] = evs_to_time_df['time_interval_right']
             evs_to_time_df = evs_to_time_df.rename(columns={'time_interval_right': 'assignment_mechanism_time'})
 
         else:
             raise ValueError('Invalid assignment mechasism selection')
     
     return evs_to_time_df
+
+def create_plots_and_data_for_ts_collection(ts_collection, property_names_dict, generate_ts_data_files, generate_ts_visualizations):
+    for tsid, ts in ts_collection.items():
+        property_id = tsid[0]
+        property_name = property_names_dict[property_id]
+        non_temporal_parameters = tsid[1]
+        ts_file_path = str(Path(f'backend/assets/timeseries/{property_id}_{property_name}_{non_temporal_parameters}.csv').resolve())
+        if generate_ts_data_files == 'Y':
+            ts.to_csv(ts_file_path) 
+        if generate_ts_visualizations == 'Y':
+            if isinstance(non_temporal_parameters, tuple):
+                non_temporal_parameters = ', '.join(non_temporal_parameters)  
+            plot_file_path = str(Path(f'backend/assets/plots/{property_id}_{non_temporal_parameters}.png').resolve())
+            plot_series(ts, title=f'Property ID: {property_id}, Property Name: {property_name}, \n Non-Temporal Parameters: ({non_temporal_parameters})')
+            plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
+            plt.close()
 
 def remap_keys(mapping):
     return [{'tsid':k, 'ar': v} for k, v in mapping.items()]
@@ -541,7 +572,7 @@ def save_ar_to_json(ar_collection, technique_name):
             processed_ar_collection = {}
             for tsid, ar in ar_collection.items():
                 ar_series = ar.copy()
-                ar_series.index = ar_series.index.map(lambda x: x.isoformat())
+                ar_series.index = ar_series.index.map(lambda x: x.isoformat().replace("+00:00", ".000Z"))
                 ar_series = ar_series.to_dict()
                 processed_ar_collection[tsid] = ar_series
         else:
@@ -562,7 +593,7 @@ def convert_ar_to_json(ar_collection, technique_name):
             processed_ar_collection = {}
             for tsid, ar in ar_collection.items():
                 ar_series = ar.copy()
-                ar_series.index = ar_series.index.map(lambda x: x.isoformat())
+                ar_series.index = ar_series.index.map(lambda x: x.isoformat().replace("+00:00", ".000Z"))
                 ar_series = ar_series.to_dict()
                 processed_ar_collection[tsid] = ar_series
         else:
@@ -587,8 +618,8 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
             ar = ar_collection[tsid].copy()
-            plot_title = f'Analysis results for tsa technique: {technique_name},\n tsa parameters: {tsa_params_str}, \n\
-            property: {property_names_dict[property]}, and non-temporal parameters : ({non_temporal_parameters})'
+            plot_title = f'Analysis results for tsa technique: {technique_name}, property: {property_names_dict[property]}, \n \
+            non-temporal parameters : ({non_temporal_parameters}) and \n tsa parameters: {tsa_params_str}'
             fig, ax = plot_series(ts, title=plot_title)
             for index in ar:
                 ax.axvline(ts.index[index], color="tab:green", linestyle="--")

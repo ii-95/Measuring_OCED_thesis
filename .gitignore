@@ -2,3 +2,4 @@ backend/testing.ipynb
 .vscode/settings.json
 backend/inputs.env
 *.pyc
+/backend/backend
