@@ -548,8 +548,11 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
 
 def create_plots_and_data_for_ts_collection(ts_collection, property_names_dict, generate_ts_data_files, generate_ts_visualizations):
     for tsid, ts in ts_collection.items():
-        property_id = tsid[0]
-        property_name = property_names_dict[property_id]
+        property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
+        if property_id in property_names_dict.keys():
+            property_name = property_names_dict[property_id]
+        else:
+            property_name = ''
         non_temporal_parameters = tsid[1]
         ts_file_path = str(Path(f'backend/assets/timeseries/{property_id}_{property_name}_{non_temporal_parameters}.csv').resolve())
         if generate_ts_data_files == 'Y':
@@ -628,6 +631,8 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa
             plt.close()
     
     elif technique_name == 'Forecasting':
+        mid_point_tsa_params_str = int(len(tsa_params_str)/2)
+        tsa_params_str = tsa_params_str[:mid_point_tsa_params_str] + '\n' + tsa_params_str[mid_point_tsa_params_str:]
         for tsid, ts in ts_collection.items():
             property = tsid[0]
             non_temporal_parameters = tsid[1]
@@ -646,7 +651,7 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa
         caused_tsid = gc_df['caused'].unique()
 
         for tsid in caused_tsid:
-            property = tsid[0]
+            property = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
             non_temporal_parameters = tsid[1]
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
@@ -663,9 +668,9 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa
 
             def node_attr(node):
                 if node == tsid:
-                    return {'label': ', '.join(map(str, node)).replace('\'',''),'color': 'black', 'fillcolor': 'lightblue', 'style': 'filled'}
+                    return {'label': ', '.join(map(str, node)).replace('\'','').replace('\"','').replace("{", '_').replace('}', '_').replace(':','_'),'color': 'black', 'fillcolor': 'lightblue', 'style': 'filled'}
                 else:
-                    return {'label': ', '.join(map(str, node)).replace('\'',''), 'color': 'black', 'fillcolor': 'grey', 'style': 'filled'}
+                    return {'label': ', '.join(map(str, node)).replace('\'','').replace('\"','').replace("{", '_').replace('}', '_').replace(':','_'), 'color': 'black', 'fillcolor': 'grey', 'style': 'filled'}
 
             def edge_attr(edge):
                 return {'label': ', '.join(map(str, edge))}

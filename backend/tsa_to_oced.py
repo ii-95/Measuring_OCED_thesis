@@ -100,12 +100,12 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
                 ts_related_objects_json = ts_related_objects_df.to_dict('records')
                 relationships_list[i] = ts_related_objects_json
 
-                related_objs_json = json_objects_df[json_objects_df['id'].isin(ot_objects_in_time_interval.values)]['relationships']
+                """  related_objs_json = json_objects_df[json_objects_df['id'].isin(ot_objects_in_time_interval.values)]['relationships']
                 if related_objs_json.isna().all():
                     empty_column = pd.Series([[]] * len(related_objs_json), index=related_objs_json.index, name = 'relationships')
                     related_objs_json = empty_column
                 related_objs_json = related_objs_json + pd.Series([[{'objectId': ts_obj_id, 'qualifier': qualifer_str}]] * len(related_objs_json), related_objs_json.index.values.tolist(), name='relationships')
-                json_objects_df.loc[related_objs_json.index, 'relationships'] = related_objs_json
+                json_objects_df.loc[related_objs_json.index, 'relationships'] = related_objs_json """
             #connect time series that are only linked to objects (e.g. time series for object frequency)
             #to a dummy event. This is done to preserve these time series in the log during future iterations
             #as pm4py discards any objects that are not related to a event when reading a log.
@@ -271,7 +271,7 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
                     causing_ts_non_temporal_parameters_str = str(causing_ts_non_temporal_parameters)
                 causing_ts_obj_id = 'ts-' + causing_ts_property_id + '-' + causing_ts_non_temporal_parameters_str
                 lag = lag_list[i]
-                caused_ts_obj_relationships = caused_ts_obj_relationships + [{'objectId': causing_ts_obj_id, 'qualifier': f'Granger caused with lags: {lag}'}]
+                caused_ts_obj_relationships = caused_ts_obj_relationships + [{'objectId': causing_ts_obj_id, 'qualifier': f'Granger caused by (with lags: {lag})'}]
             json_objects_df.at[caused_ts_obj_idx, 'relationships'] = caused_ts_obj_relationships
 
     ocel_json_dict_mod = {}

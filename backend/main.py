@@ -91,9 +91,13 @@ use_tbpd_results_as_ts_for_granger_causality = os.getenv('use_tbpd_results_as_ts
 if not use_tbpd_results_as_ts_for_granger_causality in ['Y', 'N']:
     use_tbpd_results_as_ts_for_granger_causality = 'N'
 
-only_compare_threshold_ts = os.getenv('only_compare_threshold_ts')
+only_compare_threshold_ts = os.getenv('only_compare_tbpd_ts')
 if not only_compare_threshold_ts:
     only_compare_threshold_ts = 'N'
+
+generate_visualizations_for_tbpd_ts = os.getenv('generate_visualizations_for_tbpd_ts')
+if not generate_visualizations_for_tbpd_ts:
+    generate_visualizations_for_tbpd_ts = 'N'
 
 use_granger_causal_ts_as_exogenous_variables = os.getenv('use_granger_causal_ts_as_exogenous_variables')
 if not use_granger_causal_ts_as_exogenous_variables in ['Y', 'N']:
@@ -138,7 +142,7 @@ elif tsa_technique == 'Granger Causality':
             if len(lag) > 2:
                 lag = list(map(int, lag))
             else:
-                lag = [lag[0]]
+                lag = [int(lag[0])]
         else:
             lag = int(lag)
     
@@ -411,6 +415,9 @@ objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_s
 #The intervals represent the division of the total interval into time intervals of length equal to the sampling rate.
 
 time_intervals = get_time_intervals(int_start, int_end, sampling_rate, offset_ti)
+
+if len(time_intervals) < 30:
+    warnings.warn(f'The specified sampling rate and/or time interval range leads to time series containing too few ({len(time_intervals)}) data points whereas a minimum of 30 data points is recommended. \n This will lead to unreliable analysis results and in extreme cases, failure to execute the analysis altogether.')
 #update start and end according to the time intervals calculated
 int_start = time_intervals[0].left
 int_end = time_intervals[-1].right
@@ -532,12 +539,16 @@ if first_iteration:
 
     pp1_dict = pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate)
     pp2_dict = pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate)
+    #service time (pp3) for atomic events is always 0 and  
+    #soujourn time (pp4) is equal to waiting time for atomic events
+    #so we don't generate any time series for these properties if all events in the log are atomic.  
     if atomic_evs:
         pp3_dict = {}
+        pp4_dict = {}
     else:
         pp3_dict = pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column)
-    pp4_dict = pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
-                    aggregation_mode, sampling_rate)
+        pp4_dict = pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+                        aggregation_mode, sampling_rate)
     pp5_dict = pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
                     aggregation_mode, sampling_rate)
     pp6_dict = pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
@@ -682,19 +693,25 @@ if not first_iteration:
             forecast_ts = forecast_ts[forecast_ts.columns[-1]]
             forecast_ts.name = tsid
             ts.name = tsid
-            ar_ts_collection_with_forecasts[tsid] = pd.concat([ts, forecast_ts],ignore_index=True)
+            ar_ts_collection_with_forecasts[tsid] = pd.concat([ts, forecast_ts])
         ar_ts_collection = ar_ts_collection_with_forecasts
 
     #use threshold based point detection results as time series for granger causality, if selected.
     if tsa_technique == 'Granger Causality':
         if use_tbpd_results_as_ts_for_granger_causality == 'Y':
-            create_plots_and_data_for_ts_collection(threshold_based_ts_dict, property_names_dict, generate_ts_data_files, generate_ts_visualizations)
+            if generate_visualizations_for_tbpd_ts == 'Y':
+                create_plots_and_data_for_ts_collection(threshold_based_ts_dict, property_names_dict, generate_ts_data_files, 'Y')
             for tbp_tsid, tbp_ts in threshold_based_ts_dict.items():
-                if not len(tbp_ts.unique()) == 1:
+                if not len(tbp_ts.unique()) == 1 and len(tbp_ts[tbp_ts==1]) > 1:
                     ar_ts_collection[tbp_tsid] = tbp_ts
         elif only_compare_threshold_ts == 'Y':
-            create_plots_and_data_for_ts_collection(threshold_based_ts_dict, property_names_dict, generate_ts_data_files, generate_ts_visualizations)
-            ar_ts_collection = threshold_based_ts_dict
+            if generate_visualizations_for_tbpd_ts == 'Y':
+                create_plots_and_data_for_ts_collection(threshold_based_ts_dict, property_names_dict, generate_ts_data_files, 'Y')
+            processed_threshold_based_ts_dict = {}
+            for tbp_tsid, tbp_ts in threshold_based_ts_dict.items():
+                if not len(tbp_ts.unique()) == 1 and len(tbp_ts[tbp_ts==1]) > 1 :
+                    processed_threshold_based_ts_dict[tbp_tsid] = tbp_ts
+            ar_ts_collection = processed_threshold_based_ts_dict
 
 warnings.simplefilter('ignore', InterpolationWarning)
 warnings.simplefilter('ignore', ValueWarning)
