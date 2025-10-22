@@ -11,7 +11,7 @@ from setup import agg
 #Waiting time is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
 #the starting time of the event. For an event with no preceding events, it's waiting time is 0.
 #It then iterates over events of each type and generates a time series for them by calling 'pp1_iter'. 
-def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
+def pp1(selected_event_types, preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
          event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp', event_type_column = 'ocel:activity'):
 
     def pp1_iter(event_type, df):
@@ -33,9 +33,10 @@ def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 
 
     for event_type in event_types:
-        type_wt_df = wt_df[wt_df[event_type_column] == event_type]
-        type_wt_df = type_wt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-        pp1_dict[event_type] = pp1_iter(event_type, type_wt_df)
+        if event_type in selected_event_types:
+            type_wt_df = wt_df[wt_df[event_type_column] == event_type]
+            type_wt_df = type_wt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp1_dict[event_type] = pp1_iter(event_type, type_wt_df)
 
     return pp1_dict
 
@@ -48,7 +49,7 @@ def pp1(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 #Synchronization time is then determined for each event by taking a difference of 'time_latest_preceding_event' and 
 #'time_earliest_preceding_event' of the event. For an event with no preceding events, it's synchronization time is 0.
 #It then iterates over events of each type and generates a time series for them by calling 'pp2_iter'. 
-def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
+def pp2(selected_event_types, preceding_events_df, event_types, events_to_time_df, aggregation_mode, sampling_rate,\
          event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 
     def pp2_iter(event_type, df):
@@ -71,9 +72,10 @@ def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
     st_df.loc[st_df['synchronization_time'].isnull(), 'synchronization_time'] = pd.Timedelta(0)
 
     for event_type in event_types:
-        type_st_df = st_df[st_df[event_type_column] == event_type]
-        type_st_df = type_st_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-        pp2_dict[event_type] = pp2_iter(event_type, type_st_df)
+        if event_type in selected_event_types:
+            type_st_df = st_df[st_df[event_type_column] == event_type]
+            type_st_df = type_st_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp2_dict[event_type] = pp2_iter(event_type, type_st_df)
         
     return pp2_dict
 
@@ -81,7 +83,7 @@ def pp2(preceding_events_df, event_types, events_to_time_df, aggregation_mode, s
 #Only called if the event log contains non-atomic events.
 #Service time is determined for each event by taking a difference of the starting and ending timestamps of the event. 
 #It then iterates over events of each type and generates a time series for them by calling 'pp3_iter'. 
-def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column,\
+def pp3(selected_event_types, event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, event_endtime_column,\
         event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp'):
 
     def pp3_iter(event_type, df):
@@ -97,10 +99,11 @@ def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rat
  
     pp3_dict = {}
     for event_type, event_type_df in event_types_to_df_map.items():
-        svt_df = event_type_df.copy()
-        svt_df['service_time'] = svt_df[event_endtime_column] - event_type_df[event_timestamp_column]
-        svt_df = events_to_time_df.merge(svt_df, on=event_id_column, how='inner', suffixes=('_2', None))
-        pp3_dict[event_type] = pp3_iter(event_type, svt_df)
+        if event_type in selected_event_types:
+            svt_df = event_type_df.copy()
+            svt_df['service_time'] = svt_df[event_endtime_column] - event_type_df[event_timestamp_column]
+            svt_df = events_to_time_df.merge(svt_df, on=event_id_column, how='inner', suffixes=('_2', None))
+            pp3_dict[event_type] = pp3_iter(event_type, svt_df)
     return pp3_dict
 
 #Generates time series for Soujourn Time for each event type in the log.
@@ -114,7 +117,7 @@ def pp3(event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rat
 #the ending time of the event. For an event with no preceding events, its soujourn time is
 #difference between its own ending and starting timestamps i.e. its service time.
 #It then iterates over events of each type and generates a time series for them by calling 'pp4_iter'. 
-def pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+def pp4(selected_event_types, pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
         aggregation_mode, sampling_rate, event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp',\
         event_type_column = 'ocel:activity'):
 
@@ -142,9 +145,10 @@ def pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic
                                                 sjt_df[event_endtime_column] -  sjt_df[event_timestamp_column]
 
         for event_type in event_types:
-            type_sjt_df = sjt_df[sjt_df[event_type_column] == event_type]
-            type_sjt_df = type_sjt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-            pp4_dict[event_type] = pp4_iter(event_type, type_sjt_df)
+            if event_type in selected_event_types:
+                type_sjt_df = sjt_df[sjt_df[event_type_column] == event_type]
+                type_sjt_df = type_sjt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+                pp4_dict[event_type] = pp4_iter(event_type, type_sjt_df)
 
     return pp4_dict
 
@@ -158,7 +162,7 @@ def pp4(pp1_dict, preceding_events_df, event_types, event_endtime_column, atomic
 #For an event with no preceding events, its flow time is difference between its own ending and starting timestamps 
 #i.e., its service time if events are non-atomic else flow time is zero if atomic.
 #It then iterates over events of each type and generates a time series for them by calling 'pp5_iter'. 
-def pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
+def pp5(selected_event_types, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
         aggregation_mode, sampling_rate, event_id_column = 'ocel:eid', event_timestamp_column = 'ocel:timestamp',\
         event_type_column = 'ocel:activity'):
 
@@ -192,9 +196,10 @@ def pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, even
                                             ft_df[event_endtime_column] -  ft_df[event_timestamp_column]
 
     for event_type in event_types:
-        type_ft_df = ft_df[ft_df[event_type_column] == event_type]
-        type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-        pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
+        if event_type in selected_event_types:
+            type_ft_df = ft_df[ft_df[event_type_column] == event_type]
+            type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
 
     return pp5_dict
 
@@ -206,7 +211,7 @@ def pp5(preceding_events_df, event_types, event_endtime_column, atomic_evs, even
 #'time_earliest_preceding_event_obj type'. Pooling time is then determined for each event by taking a difference of the two
 #aforementioned timestamps. For an event with no preceding events related by the object type of the combination, 
 #it's pooling time is 0.
-def pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate,\
+def pp6(selected_event_types, selected_object_types, preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate,\
         event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 
     def pp6_iter(event_type, df):
@@ -224,25 +229,26 @@ def pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggre
 
 
     for (event_type,object_type) in event_object_combinations:
-        combo_pt_df = pt_df[(pt_df[event_type_column] == event_type)]
-        combo_pt_df['time_latest_preceding_event_obj_type'] \
-            = combo_pt_df[f'preceding_events_time_{object_type}'].str[0]
-        
-        combo_pt_df['time_earliest_preceding_event_obj_type'] \
-            = combo_pt_df[f'preceding_events_time_{object_type}'].str[-1]
-        
-        combo_pt_df['time_latest_preceding_event_obj_type'] \
-            = pd.to_datetime(combo_pt_df['time_latest_preceding_event_obj_type'], utc=True)
-        
-        combo_pt_df['time_earliest_preceding_event_obj_type'] \
-            = pd.to_datetime(combo_pt_df['time_earliest_preceding_event_obj_type'], utc=True)
-        
-        combo_pt_df['pooling_time'] = combo_pt_df['time_latest_preceding_event_obj_type'] \
-            - combo_pt_df['time_earliest_preceding_event_obj_type']
-        
-        combo_pt_df.loc[combo_pt_df['pooling_time'].isnull(), 'pooling_time'] = pd.Timedelta(0)
-        combo_pt_df = combo_pt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-        pp6_dict[(event_type,object_type)] = pp6_iter(event_type, combo_pt_df)
+        if event_type in selected_event_types and object_type in selected_object_types:
+            combo_pt_df = pt_df[(pt_df[event_type_column] == event_type)]
+            combo_pt_df['time_latest_preceding_event_obj_type'] \
+                = combo_pt_df[f'preceding_events_time_{object_type}'].str[0]
+            
+            combo_pt_df['time_earliest_preceding_event_obj_type'] \
+                = combo_pt_df[f'preceding_events_time_{object_type}'].str[-1]
+            
+            combo_pt_df['time_latest_preceding_event_obj_type'] \
+                = pd.to_datetime(combo_pt_df['time_latest_preceding_event_obj_type'], utc=True)
+            
+            combo_pt_df['time_earliest_preceding_event_obj_type'] \
+                = pd.to_datetime(combo_pt_df['time_earliest_preceding_event_obj_type'], utc=True)
+            
+            combo_pt_df['pooling_time'] = combo_pt_df['time_latest_preceding_event_obj_type'] \
+                - combo_pt_df['time_earliest_preceding_event_obj_type']
+            
+            combo_pt_df.loc[combo_pt_df['pooling_time'].isnull(), 'pooling_time'] = pd.Timedelta(0)
+            combo_pt_df = combo_pt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp6_dict[(event_type,object_type)] = pp6_iter(event_type, combo_pt_df)
         
     return pp6_dict
 
@@ -256,7 +262,7 @@ def pp6(preceding_events_df, event_object_combinations, events_to_time_df, aggre
 #Lagging time is then determined for each event by taking a difference of the two aforementioned timestamps. 
 #For an event with no preceding events related by objects of either the object type of the combination or any other type,
 #its lagging time is 0. If the calculated lagging time is negative, it's set to zero.
-def pp7(preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate, \
+def pp7(selected_event_types, selected_object_types, preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate, \
         event_id_column = 'ocel:eid', event_type_column = 'ocel:activity'):
 
     def pp7_iter(event_type, df):
@@ -275,26 +281,27 @@ def pp7(preceding_events_df, event_object_combinations, events_to_time_df, aggre
 
 
     for (event_type,object_type) in event_object_combinations:
-        combo_lt_df = lt_df[(lt_df[event_type_column] == event_type)]
+        if event_type in selected_event_types and object_type in selected_object_types:
+            combo_lt_df = lt_df[(lt_df[event_type_column] == event_type)]
 
-        combo_lt_df['time_latest_preceding_event_obj_type'] = \
-            combo_lt_df[f'preceding_events_time_{object_type}'].str[0]
-        
-        combo_lt_df['time_earliest_preceding_event_excluding_obj_type']\
-              = combo_lt_df[f'preceding_events_time_excluding_{object_type}'].str[-1]
-        
-        combo_lt_df['time_latest_preceding_event_obj_type'] = \
-            pd.to_datetime(combo_lt_df['time_latest_preceding_event_obj_type'], utc=True)
-        
-        combo_lt_df['time_earliest_preceding_event_excluding_obj_type'] \
-            = pd.to_datetime(combo_lt_df['time_earliest_preceding_event_excluding_obj_type'], utc=True)
-        
-        combo_lt_df['lagging_time'] = combo_lt_df['time_latest_preceding_event_obj_type'] \
-            - combo_lt_df['time_earliest_preceding_event_excluding_obj_type']
-        
-        combo_lt_df.loc[combo_lt_df['lagging_time'].isnull(), 'lagging_time'] = pd.Timedelta(0)
-        combo_lt_df.loc[combo_lt_df['lagging_time'] < pd.Timedelta(0), 'lagging_time'] = pd.Timedelta(0)
-        combo_lt_df = combo_lt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
-        pp7_dict[(event_type,object_type)] = pp7_iter(event_type, combo_lt_df)
+            combo_lt_df['time_latest_preceding_event_obj_type'] = \
+                combo_lt_df[f'preceding_events_time_{object_type}'].str[0]
+            
+            combo_lt_df['time_earliest_preceding_event_excluding_obj_type']\
+                = combo_lt_df[f'preceding_events_time_excluding_{object_type}'].str[-1]
+            
+            combo_lt_df['time_latest_preceding_event_obj_type'] = \
+                pd.to_datetime(combo_lt_df['time_latest_preceding_event_obj_type'], utc=True)
+            
+            combo_lt_df['time_earliest_preceding_event_excluding_obj_type'] \
+                = pd.to_datetime(combo_lt_df['time_earliest_preceding_event_excluding_obj_type'], utc=True)
+            
+            combo_lt_df['lagging_time'] = combo_lt_df['time_latest_preceding_event_obj_type'] \
+                - combo_lt_df['time_earliest_preceding_event_excluding_obj_type']
+            
+            combo_lt_df.loc[combo_lt_df['lagging_time'].isnull(), 'lagging_time'] = pd.Timedelta(0)
+            combo_lt_df.loc[combo_lt_df['lagging_time'] < pd.Timedelta(0), 'lagging_time'] = pd.Timedelta(0)
+            combo_lt_df = combo_lt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            pp7_dict[(event_type,object_type)] = pp7_iter(event_type, combo_lt_df)
         
     return pp7_dict

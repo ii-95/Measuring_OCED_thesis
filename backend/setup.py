@@ -11,6 +11,9 @@ from sktime.utils.plotting import plot_series
 import matplotlib.pyplot as plt
 import rustworkx as rx
 from rustworkx.visualization import graphviz_draw
+import graphviz
+import plotly.express as px
+import streamlit as st
 
 def agg(series, aggregation_mode, sampling_rate):
     if type(series) == pd.Series:
@@ -193,11 +196,11 @@ def get_event_to_object_type_relations_df_map(event_to_object_relations_df, even
 # them so it's difficult to follow but it does so to achieve a much better performance level as compared to code that 
 # would have been more readable i.e. apply functions and similar. 
 # Using pandas vectorization was not applicable/possible in this scenario.
-
-def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
+@st.cache_data
+def get_preceding_events_df(_ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
                             event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
                             object_type_column = 'ocel:type'):
-    preceding_events_df = ocel_extended_df.copy()
+    preceding_events_df = _ocel_extended_df.copy()
     object_cols = [col for col in preceding_events_df.columns if object_type_column in col]
     df = preceding_events_df[object_cols]
     df = df.map(lambda d: d if isinstance(d, list) else [])
@@ -546,7 +549,7 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     
     return evs_to_time_df
 
-def create_plots_and_data_for_ts_collection(ts_collection, property_names_dict, generate_ts_data_files, generate_ts_visualizations):
+def create_plots_for_ts_collection(ts_collection, property_names_dict):
     for tsid, ts in ts_collection.items():
         property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
         if property_id in property_names_dict.keys():
@@ -554,16 +557,13 @@ def create_plots_and_data_for_ts_collection(ts_collection, property_names_dict, 
         else:
             property_name = ''
         non_temporal_parameters = tsid[1]
-        ts_file_path = str(Path(f'backend/assets/timeseries/{property_id}_{property_name}_{non_temporal_parameters}.csv').resolve())
-        if generate_ts_data_files == 'Y':
-            ts.to_csv(ts_file_path) 
-        if generate_ts_visualizations == 'Y':
-            if isinstance(non_temporal_parameters, tuple):
-                non_temporal_parameters = ', '.join(non_temporal_parameters)  
-            plot_file_path = str(Path(f'backend/assets/plots/{property_id}_{non_temporal_parameters}.png').resolve())
-            plot_series(ts, title=f'Property ID: {property_id}, Property Name: {property_name}, \n Non-Temporal Parameters: ({non_temporal_parameters})')
-            plt.savefig(plot_file_path, bbox_inches='tight', dpi = 200)
-            plt.close()
+        if isinstance(non_temporal_parameters, tuple):
+            non_temporal_parameters = ', '.join(non_temporal_parameters)
+        chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
+        with st.container(border=True):
+            st.markdown(f'{property_name} ({property_id}), parameters: ({non_temporal_parameters})')
+            st.plotly_chart(chart, key=tsid)
+
 
 def remap_keys(mapping):
     return [{'tsid':k, 'ar': v} for k, v in mapping.items()]
@@ -589,6 +589,7 @@ def save_ar_to_json(ar_collection, technique_name):
         df['ar'] = ar_collection[['causing','lag']].values.tolist()
         df = df.groupby('tsid').agg(list).reset_index()
         df.to_json(ar_file_path, orient='records', indent=4, force_ascii= False)
+    return ar_file_path
 
 def convert_ar_to_json(ar_collection, technique_name):
     if technique_name in ['Change Point Detection', 'Forecasting', 'Threshold Based Point Detection']:
@@ -612,70 +613,76 @@ def convert_ar_to_json(ar_collection, technique_name):
     
     return json_ar_collection
 
-def visualize_analysis_results(ts_collection, ar_collection, technique_name, tsa_params, property_names_dict):
-    tsa_params_str = json.dumps(tsa_params)
+def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict):
     if technique_name in ['Change Point Detection', 'Threshold Based Point Detection']:
         for tsid, ts in ts_collection.items():
-            property = tsid[0]
             non_temporal_parameters = tsid[1]
+            property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
+            if property_id in property_names_dict.keys():
+                property_name = property_names_dict[property_id]
+            else:
+                property_name = ''
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
             ar = ar_collection[tsid].copy()
-            plot_title = f'Analysis results for tsa technique: {technique_name}, property: {property_names_dict[property]}, \n \
-            non-temporal parameters : ({non_temporal_parameters}) and \n tsa parameters: {tsa_params_str}'
-            fig, ax = plot_series(ts, title=plot_title)
+            chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
             for index in ar:
-                ax.axvline(ts.index[index], color="tab:green", linestyle="--")
-            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
-            plt.savefig(ar_viz_file_path, bbox_inches='tight', dpi = 200)
-            plt.close()
+                chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="green")
+            with st.container(border=True):
+                if technique_name == 'Change Point Detection':
+                    st.markdown(f'Change points for timeseries of {property_name}({property_id}) with parameters: {non_temporal_parameters}')
+                else:
+                    st.markdown(f'Threshold based points for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.plotly_chart(chart)
     
     elif technique_name == 'Forecasting':
-        mid_point_tsa_params_str = int(len(tsa_params_str)/2)
-        tsa_params_str = tsa_params_str[:mid_point_tsa_params_str] + '\n' + tsa_params_str[mid_point_tsa_params_str:]
         for tsid, ts in ts_collection.items():
-            property = tsid[0]
+            property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
+            if property_id in property_names_dict.keys():
+                property_name = property_names_dict[property_id]
+            else:
+                property_name = ''
             non_temporal_parameters = tsid[1]
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
-            ar = ar_collection[tsid].copy()
-            plot_title = f'analysis results for tsa technique: {technique_name},\n tsa parameters: {tsa_params_str}, \n\
-            property: {property_names_dict[property]}, and non-temporal parameters : ({non_temporal_parameters})'
-            plot_series(ts, ar, title = plot_title)
-            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
-            plt.savefig(ar_viz_file_path, bbox_inches='tight', dpi = 200)
-            plt.close()
+            ar_df = ar_collection[tsid].copy()
+            ts_df = ts.copy()
+            ts_df = ts_df.rename('values').to_frame()
+            ar_df = ar_df.rename('values').to_frame()
+            ts_df['category'] = 'historic values'
+            ar_df['category'] = 'forecasts'
+            joined_df = pd.concat([ts_df,ar_df])
+            joined_df.index.name = 'time'
+            joined_df = joined_df.reset_index()
+            chart = px.line(joined_df, x='time', y='values', color='category', color_discrete_sequence=['blue', 'darkred'], render_mode='svg').update_layout(yaxis_title=None)
+            with st.container(border=True):
+                st.markdown(f'Forecasts for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.plotly_chart(chart)
+
     
     elif technique_name == 'Granger Causality':
         gc_df = ar_collection
-        caused_tsid = gc_df['caused'].unique()
+        caused_tsid_list = gc_df['caused'].unique()
 
-        for tsid in caused_tsid:
-            property = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
-            non_temporal_parameters = tsid[1]
+        for caused_tsid in caused_tsid_list:
+            property_id = caused_tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
+            if property_id in property_names_dict.keys():
+                property_name = property_names_dict[property_id]
+            else:
+                property_name = ''
+            non_temporal_parameters = caused_tsid[1]
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
-            idx_tuples = []
-            graph = rx.PyDiGraph()
-            caused_df = gc_df[gc_df['caused'] == tsid]
+            graph = graphviz.Digraph(graph_attr={'rankdir': 'LR'})
+            caused_df = gc_df[gc_df['caused'] == caused_tsid]
             causing_arr = caused_df['causing'].values.tolist()
-            lag_arr = caused_df['lag'].values.tolist()
-            causing_idx = graph.add_nodes_from(list(causing_arr))
-            caused_idx = graph.add_node(tsid)
-            for idx in causing_idx:
-                idx_tuples.append((idx, caused_idx, lag_arr[idx]))
-            graph.add_edges_from(idx_tuples)
-
-            def node_attr(node):
-                if node == tsid:
-                    return {'label': ', '.join(map(str, node)).replace('\'','').replace('\"','').replace("{", '_').replace('}', '_').replace(':','_'),'color': 'black', 'fillcolor': 'lightblue', 'style': 'filled'}
-                else:
-                    return {'label': ', '.join(map(str, node)).replace('\'','').replace('\"','').replace("{", '_').replace('}', '_').replace(':','_'), 'color': 'black', 'fillcolor': 'grey', 'style': 'filled'}
-
-            def edge_attr(edge):
-                return {'label': ', '.join(map(str, edge))}
-            
-            #plot_title = f'analysis results for tsa technique: {technique_name}, tsa parameters: {tsa_params_str}, property: {property}, and non-temporal parameters : ({non_temporal_parameters})'
-            ar_viz_file_path = str(Path(f'backend/assets/analysis_results_plots/{technique_name}/{property}_{non_temporal_parameters}.png').resolve())
-            graphviz_draw(graph, node_attr_fn=node_attr, edge_attr_fn=edge_attr, method='dot', graph_attr = {'rankdir': 'LR'})\
-            .save(ar_viz_file_path, format='png')
+            lag_dict = dict(zip(caused_df['causing'], caused_df['lag']))
+            graph.node(str(caused_tsid), style='filled', fillcolor = 'lightblue')
+            for causing_tsid in causing_arr:
+                lag_arr = lag_dict[causing_tsid]
+                lag_str = ', '.join(str(x) for x in lag_arr)
+                graph.node(str(causing_tsid), style='filled', fillcolor = 'lightgray')
+                graph.edge(str(causing_tsid), str(caused_tsid), lag_str)
+            with st.container(border=True):
+                st.markdown(f'Granger Causality for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.graphviz_chart(graph)

@@ -3,3 +3,11 @@ backend/testing.ipynb
 backend/inputs.env
 *.pyc
 /backend/backend
+*.json
+*.png
+*.txt
+*.sqlite
+*.csv
+backend/assets/temp/tmpwiz_2f5usqlite
+*.txt
+backend/assets/temp/placeholder.txt

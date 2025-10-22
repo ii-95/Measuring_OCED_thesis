@@ -4,7 +4,7 @@ from pandas.api.types import is_any_real_numeric_dtype
 from setup import agg
 from collections import Counter
 
-def op1(object_types_to_df_map, objects_to_time_df, sampling_rate, object_id_column = 'ocel:oid'):
+def op1(selected_object_types, object_types_to_df_map, objects_to_time_df, sampling_rate, object_id_column = 'ocel:oid'):
     
     # Function to produce time series of count/frequency of objects for a given object type
     # Input: object type, dataframe containing all objects of the specified type 
@@ -22,13 +22,14 @@ def op1(object_types_to_df_map, objects_to_time_df, sampling_rate, object_id_col
     # Map object type to time series in dictionary 'op1_dict'
     op1_dict = {}
     for object_type, object_type_df in object_types_to_df_map.items():
-        df = objects_to_time_df.merge(object_type_df[object_id_column], on = object_id_column,\
-                                        how='right', suffixes=('_2', None))\
-            .drop_duplicates()
-        op1_dict[object_type] = op1_iter(object_type, df)
+        if object_type in selected_object_types:
+            df = objects_to_time_df.merge(object_type_df[object_id_column], on = object_id_column,\
+                                            how='right', suffixes=('_2', None))\
+                .drop_duplicates()
+            op1_dict[object_type] = op1_iter(object_type, df)
     return op1_dict
 
-def op2(object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
+def op2(selected_object_types, object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
         object_id_column='ocel:oid', timestamp_column='ocel:timestamp', 
         changed_field_column='ocel:field'):
 
@@ -48,28 +49,29 @@ def op2(object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_r
     op2_dict = {}
 
     for object_type, object_type_df in object_types_to_df_map.items():
-        #get all attributes associated with object type
-        object_attributes = list(set(object_type_df.columns.values) - \
-                                 set([object_id_column, timestamp_column, changed_field_column]))
-        for object_attribute in object_attributes:
-            #get rows which contain attribute's initial value or attribute changes
-            attr_df = object_type_df[object_type_df[changed_field_column].isin([None, object_attribute])]
-            #check if attribute has values assigned
-            if not attr_df.empty:
-                #merge with object's time assignment df
-                attr_df = attr_df.merge(objects_to_time_df, on = object_id_column, how='inner')
-                #only keep those rows where attribute to object assignment timestamp is less than object to time period
-                #assignment timestamp
-                attr_df = attr_df[attr_df[timestamp_column] <= attr_df['assignment_mechanism_time']]
-                #get latest value of attribute for each object at end of each time interval
-                attr_df = attr_df.sort_values(by='ocel:timestamp').groupby([object_id_column, 'assignment_mechanism_time']).tail(1)
-                attr_df = attr_df.reset_index()
-                # Call function 'op2_iter' for each combination of an object type and one of it's numerical attributes
-                # to produce a dictionary that maps the time series attribute values. 
-                op2_dict[(object_type, object_attribute)] = op2_iter(object_type, object_attribute, attr_df)
+        if object_type in selected_object_types:
+            #get all attributes associated with object type
+            object_attributes = list(set(object_type_df.columns.values) - \
+                                    set([object_id_column, timestamp_column, changed_field_column]))
+            for object_attribute in object_attributes:
+                #get rows which contain attribute's initial value or attribute changes
+                attr_df = object_type_df[object_type_df[changed_field_column].isin([None, object_attribute])]
+                #check if attribute has values assigned
+                if not attr_df.empty:
+                    #merge with object's time assignment df
+                    attr_df = attr_df.merge(objects_to_time_df, on = object_id_column, how='inner')
+                    #only keep those rows where attribute to object assignment timestamp is less than object to time period
+                    #assignment timestamp
+                    attr_df = attr_df[attr_df[timestamp_column] <= attr_df['assignment_mechanism_time']]
+                    #get latest value of attribute for each object at end of each time interval
+                    attr_df = attr_df.sort_values(by='ocel:timestamp').groupby([object_id_column, 'assignment_mechanism_time']).tail(1)
+                    attr_df = attr_df.reset_index()
+                    # Call function 'op2_iter' for each combination of an object type and one of it's numerical attributes
+                    # to produce a dictionary that maps the time series attribute values. 
+                    op2_dict[(object_type, object_attribute)] = op2_iter(object_type, object_attribute, attr_df)
     return op2_dict
 
-def op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate, object_id_column = 'ocel:oid'):
+def op3(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate, object_id_column = 'ocel:oid'):
 
 
     # Function to produce time series of (total) number of events per object of a given object type
@@ -90,20 +92,21 @@ def op3(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampli
 
     #'object_type_summary_df' contains rows of objects of 'object type' from 'objects_summary_df'
     for object_type, object_type_summary_df in object_type_summary_df_map.items():
-        #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
-        #merge with object_type_summary_df which contains information regarding the events in each
-        #objects lifecycle in column 'activities_lifecycle' and hence the number of events per object
-        #can be determined using this information.
-        df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column, \
-                                      how='inner', suffixes=('_2', None))
-        # Call function 'op3_iter' for each object type to produce respective timeseries for (total) 
-        # number of events per object.
-        # Map event type to time series in dictionary 'op3_dict'   
-        op3_dict[object_type] = op3_iter(object_type, df)
+        if object_type in selected_object_types:
+            #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
+            #merge with object_type_summary_df which contains information regarding the events in each
+            #objects lifecycle in column 'activities_lifecycle' and hence the number of events per object
+            #can be determined using this information.
+            df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column, \
+                                        how='inner', suffixes=('_2', None))
+            # Call function 'op3_iter' for each object type to produce respective timeseries for (total) 
+            # number of events per object.
+            # Map event type to time series in dictionary 'op3_dict'   
+            op3_dict[object_type] = op3_iter(object_type, df)
     return op3_dict
 
 
-def op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
+def op4(selected_event_types, selected_object_types, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
         event_id_column = 'ocel:eid', object_id_column= 'ocel:oid', event_type_column = 'ocel:activity', \
         object_type_column = 'ocel:type'):
     
@@ -121,24 +124,25 @@ def op4(event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, 
 
     op4_dict = {}
     for (event_type, object_type), event_to_object_relations_df in event_to_object_relations_df_map.items():
-        #For this property, we only wish to retain unique combinations of related events and objects 
-        # of the specified types, irrespective of qualifiers and timestamps.
-        df = event_to_object_relations_df[[event_id_column, event_type_column, 
-                                                                    object_id_column, object_type_column]] \
-                                                                    .drop_duplicates()
-        #  Subsequently we count the number of events per object
-        df = df.groupby(object_id_column).count().reset_index()[[object_id_column,object_type_column]]\
-                                                        .rename(columns={object_type_column: 'event_count'})
-        #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
-        #merge with 'event_to_object_relations_df' which contains all related events and objects of the specified types.
-        df = objects_to_time_df.merge(df, on= object_id_column, how='inner', suffixes=('_2', None))
-        # Call function 'op4_iter' for each combination of object type and event type in the log 
-        # to produce respective timeseries for number of events of the type per object of the type.
-        # Map event type to time series in dictionary 'op4_dict'   
-        op4_dict[(object_type, event_type)] = op4_iter(object_type, event_type, df)
+        if event_type in selected_event_types and object_type in selected_object_types:
+            #For this property, we only wish to retain unique combinations of related events and objects 
+            # of the specified types, irrespective of qualifiers and timestamps.
+            df = event_to_object_relations_df[[event_id_column, event_type_column, 
+                                                                        object_id_column, object_type_column]] \
+                                                                        .drop_duplicates()
+            #  Subsequently we count the number of events per object
+            df = df.groupby(object_id_column).count().reset_index()[[object_id_column,object_type_column]]\
+                                                            .rename(columns={object_type_column: 'event_count'})
+            #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
+            #merge with 'event_to_object_relations_df' which contains all related events and objects of the specified types.
+            df = objects_to_time_df.merge(df, on= object_id_column, how='inner', suffixes=('_2', None))
+            # Call function 'op4_iter' for each combination of object type and event type in the log 
+            # to produce respective timeseries for number of events of the type per object of the type.
+            # Map event type to time series in dictionary 'op4_dict'   
+            op4_dict[(object_type, event_type)] = op4_iter(object_type, event_type, df)
     return op4_dict
 
-def op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate, object_id_column = 'ocel:oid'):
+def op5(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate, object_id_column = 'ocel:oid'):
 
     # Function to produce time series of lifecycle duration of objects of a given object type
     # Input: object type, dataframe containing all objects of the specified type along with their
@@ -158,17 +162,18 @@ def op5(object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampli
 
     #'object_type_summary_df' contains rows of objects of 'object type' from 'objects_summary_df'
     for object_type, object_type_summary_df in object_type_summary_df_map.items():
-        #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
-        #merge with object_type_summary_df which contains lifecycle duration of objects
-        df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column,\
-                                       how='inner', suffixes=('_2', None))
-        # Call function 'op5_iter' for each object type to produce respective timeseries for lifecycle duration
-        # of objects of the specified type.
-        # Map event type to time series in dictionary 'op5_dict'   
-        op5_dict[object_type] = op5_iter(object_type, df)
+        if object_type in selected_object_types:
+            #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
+            #merge with object_type_summary_df which contains lifecycle duration of objects
+            df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column,\
+                                        how='inner', suffixes=('_2', None))
+            # Call function 'op5_iter' for each object type to produce respective timeseries for lifecycle duration
+            # of objects of the specified type.
+            # Map event type to time series in dictionary 'op5_dict'   
+            op5_dict[object_type] = op5_iter(object_type, df)
     return op5_dict
 
-def op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate,\
+def op6(selected_object_types, object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate,\
          object_id_column='ocel:oid', event_id_column='ocel:eid', object_type_column='ocel:type'):
     
     # Function to produce time series of number of object interactions per event between objects of two given 
@@ -197,12 +202,13 @@ def op6(object_interactions_df, events_to_time_df, aggregation_mode, sampling_ra
     # related to the same event
     object_to_object_type_combinations= obj_intr_df['object_type_pairs'].drop_duplicates()
     for object_to_object_type_combination in object_to_object_type_combinations:
-        #filter rows for the specified object type combination 
-        combination_df = obj_intr_df[obj_intr_df['object_type_pairs']==object_to_object_type_combination]
-        #get count of interactions per event
-        interaction_count_df = combination_df.groupby(event_id_column).count().reset_index()
-        #get timestamps of events according to assignment mechanism
-        df = interaction_count_df.merge(events_to_time_df, on=event_id_column, how='inner')
-        #generate time series for each combination
-        op6_dict[object_to_object_type_combination] = op6_iter(object_to_object_type_combination, df)
+        if object_to_object_type_combination[0] in selected_object_types and object_to_object_type_combination[1] in selected_object_types:
+            #filter rows for the specified object type combination 
+            combination_df = obj_intr_df[obj_intr_df['object_type_pairs']==object_to_object_type_combination]
+            #get count of interactions per event
+            interaction_count_df = combination_df.groupby(event_id_column).count().reset_index()
+            #get timestamps of events according to assignment mechanism
+            df = interaction_count_df.merge(events_to_time_df, on=event_id_column, how='inner')
+            #generate time series for each combination
+            op6_dict[object_to_object_type_combination] = op6_iter(object_to_object_type_combination, df)
     return op6_dict
