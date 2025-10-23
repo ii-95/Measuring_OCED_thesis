@@ -179,7 +179,7 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
     json_events_df['attributes'] = json_events_df['attributes'].fillna('').apply(list)
 
 #attribute name contains the tsa technique name and a dictionary (converted to string) of all associated parameters
-    attr_name = tsa_technique + json.dumps(tsa_params)
+    attr_name = tsa_technique + '(' + ', '.join(str(x) for x in tsa_params.values() if x != None) + ')'
     if tsa_technique != 'Granger Causality':
         for tsid, ar in ar_collection.items():
             #get all relevant variable values

@@ -170,8 +170,9 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
         for tsid_2, ts_2 in other_ts_collection.items():
             df = ts_df.merge(ts_2, left_index = True, right_index = True, how = 'left').dropna()
             lag_limit = math.floor((len(df)-1) / 3 - 1)
-            if use_change_point_difference_as_lag == 'Y':
+            if use_change_point_difference_as_lag == 'Yes':
                 lag_list = []
+                lag_cp_list = []
                 caused_cp = change_point_indices_dict[tsid]
                 causing_cp = change_point_indices_dict[tsid_2]
                 for cp in caused_cp:
@@ -179,6 +180,7 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
                         possible_lag = cp - cp_2
                         if possible_lag > 0 and possible_lag <= lag_limit:
                             lag_list.append(possible_lag)
+                            lag_cp_list.append((cp_2,cp))
                 if not lag_list:
                     continue
             elif not lag:
@@ -199,11 +201,13 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
                 print(tsid, tsid_2)
                 print(f'Warning: Cannot perform Granger Causality test for: ({tsid}, {tsid_2}) due to the following error: \n {err} \n the time series pair will be discarded from the results')
                 continue
-            for l in lag_list:
+            for i,l in enumerate(lag_list):
                 p_values = []
                 for value in gc[l][0].values():
                     p_values.append(value[1])
                 if all(p_val < p_val_thresh for p_val in p_values):
+                    if use_change_point_difference_as_lag == 'Yes':
+                        l = (l,lag_cp_list[i])
                     gc_pairs_with_lag.append((tsid, tsid_2, l))
     gc_df = pd.DataFrame(gc_pairs_with_lag, columns = ['caused', 'causing', 'lag'])
     if gc_df.empty:
@@ -237,7 +241,7 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, ts_causal_fa
     if not periods_to_predict:
         periods_to_predict = 4
     if not use_granger_causal_ts_as_exogenous_variables: 
-        use_granger_causal_ts_as_exogenous_variables = 'N'
+        use_granger_causal_ts_as_exogenous_variables = 'No'
     if not start_p:
         start_p = 2
     if not start_q:
@@ -283,7 +287,7 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, ts_causal_fa
         pred.index = pd.to_datetime(pred.index.end_time.normalize(), utc=True)
         interimn_ar_collection[tsid] = pred
 
-    if use_granger_causal_ts_as_exogenous_variables == 'Y':
+    if use_granger_causal_ts_as_exogenous_variables == 'Yes':
         pred_intervals = []
         for i in range (1, periods_to_predict+1):
             pred_intervals.append(time_intervals[-1].right + i * offset)

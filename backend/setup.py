@@ -613,7 +613,7 @@ def convert_ar_to_json(ar_collection, technique_name):
     
     return json_ar_collection
 
-def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict):
+def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict, tsa_params):
     if technique_name in ['Change Point Detection', 'Threshold Based Point Detection']:
         for tsid, ts in ts_collection.items():
             non_temporal_parameters = tsid[1]
@@ -625,7 +625,10 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             if isinstance(non_temporal_parameters, tuple):
                 non_temporal_parameters = ', '.join(non_temporal_parameters)
             ar = ar_collection[tsid].copy()
-            chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
+            ts_df = ts.copy()
+            ts_df.index.name = 'time'
+            ts_df = ts_df.rename('values').reset_index()
+            chart = px.line(ts_df, x='time', y='values', color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
             for index in ar:
                 chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="green")
             with st.container(border=True):
@@ -633,7 +636,7 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
                     st.markdown(f'Change points for timeseries of {property_name}({property_id}) with parameters: {non_temporal_parameters}')
                 else:
                     st.markdown(f'Threshold based points for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
-                st.plotly_chart(chart)
+                st.plotly_chart(chart,key=(tsid,tsa_params))
     
     elif technique_name == 'Forecasting':
         for tsid, ts in ts_collection.items():
@@ -657,10 +660,11 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             chart = px.line(joined_df, x='time', y='values', color='category', color_discrete_sequence=['blue', 'darkred'], render_mode='svg').update_layout(yaxis_title=None)
             with st.container(border=True):
                 st.markdown(f'Forecasts for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
-                st.plotly_chart(chart)
+                st.plotly_chart(chart, key=(tsid,tsa_params))
 
     
     elif technique_name == 'Granger Causality':
+        ar_collection.to_csv('gc_df_mod.csv')
         gc_df = ar_collection
         caused_tsid_list = gc_df['caused'].unique()
 
@@ -680,7 +684,10 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             graph.node(str(caused_tsid), style='filled', fillcolor = 'lightblue')
             for causing_tsid in causing_arr:
                 lag_arr = lag_dict[causing_tsid]
-                lag_str = ', '.join(str(x) for x in lag_arr)
+                if isinstance(lag_arr[0], tuple):
+                    lag_str = ',    '.join(str(x).replace(',', '', 1).lstrip('(').replace('))',')',1) for x in lag_arr)
+                else:
+                    lag_str = ', '.join(str(x) for x in lag_arr)
                 graph.node(str(causing_tsid), style='filled', fillcolor = 'lightgray')
                 graph.edge(str(causing_tsid), str(caused_tsid), lag_str)
             with st.container(border=True):
