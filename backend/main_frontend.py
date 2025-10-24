@@ -30,19 +30,21 @@ def disable(form_key):
     st.session_state[form_key] = True
 
 # Initialize disabled for form_submit_button to False
-form_keys = ['ocel_file_form_disable', 'atomic_evs_form_disable','ocel_input_details_form_disable','resource_object_type_form_disable', 'tsa_form_disable', 'tsa_params_form_disable', 'append_forecasts_form_disable']
+form_keys = ['ocel_file_form_disable', 'atomic_evs_form_disable', 'events_endtime_column_form_disable', 'ocel_input_details_form_disable','resource_object_type_form_disable', 'tsa_form_disable', 'tsa_params_form_disable', 'append_forecasts_form_disable']
 for form_key in form_keys:
     if form_key not in st.session_state:
         st.session_state[form_key] = False
 
-if 'ar_history' not in st.session_state:
-        st.session_state['ar_history'] = {}
+session_state_variables = {'ocel_file_path':{}, 'atomic_evs_str':'', 'event_endtime_column':'', 'aggregation_mode':'', 'sampling_rate':'', 'assignment_mechanism':'', 'int_start':'', \
+                           'int_end':'', 'selected_properties':'', 'selected_object_types':'', 'selected_event_types':'','resource_object_type':'', 'tsa_params': {}, 'tsa_technique':'',\
+                            'mode':'', 'comparison_operator':'', 'threshold_1':'', 'threshold_2':'', 'use_change_point_difference_as_lag':'No', 'use_tbpd_results_as_ts_for_granger_causality':'No', \
+                            'only_compare_threshold_ts':'No', 'use_granger_causal_ts_as_exogenous_variables':'No', 'append_forecasts_to_ts':'No', 'ar_history':{}, 'ar_ts_history':{},\
+                            'ar_params_history':{}}
 
-if 'ar_ts_history' not in st.session_state:
-        st.session_state['ar_ts_history'] = {}
 
-if 'ar_params_history' not in st.session_state:
-        st.session_state['ar_params_history'] = {}
+for variable, init_value in session_state_variables.items():
+    if variable not in st.session_state:
+        st.session_state[variable] = init_value
 
 def file_selector(folder_path='input_logs'):
     filenames = os.listdir(folder_path)
@@ -53,28 +55,62 @@ def file_selector(folder_path='input_logs'):
     selected_filename = st.selectbox('Select a file', accepted_filenames)
     if selected_filename:
         return os.path.join(folder_path, selected_filename)
-    
-with st.sidebar.form('ocel_file_form'):
-    ocel_file_path = file_selector()
-    if ocel_file_path:
-        st.write('You selected `%s`' % ocel_file_path)
-    disable_form_key = 'ocel_file_form_disable'
-    st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
+
+ocel_file_path = st.session_state['ocel_file_path']
+if not ocel_file_path:
+    with st.sidebar.form('ocel_file_form', clear_on_submit=True):
+        selected_ocel_file_path = file_selector()
+        disable_form_key = 'ocel_file_form_disable'
+        st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
+
+    if not selected_ocel_file_path:
+        st.stop()
+    else:
+        ocel_file_path = selected_ocel_file_path
+        st.session_state['ocel_file_path'] = selected_ocel_file_path
+        st.rerun()
+else:
+    st.sidebar.write(f'**OCEL**: :blue[{ocel_file_path}]')
 
 if not ocel_file_path:
     st.stop()
 
-with st.sidebar.form('atomic_evs_form'):
-    atomic_evs_str = st.selectbox('Does the log contain non-atomic events?', ['', 'No', 'Yes'])
-    if atomic_evs_str == 'Yes':
-        event_endtime_column = st.text_input('Please enter the event attribute containing the endtime for non-atomic events')
-    else:
-        event_endtime_column = ''
-    disable_form_key = 'atomic_evs_form_disable'
-    st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
-
+atomic_evs_str = st.session_state['atomic_evs_str']
 if not atomic_evs_str:
-    st.stop()
+    with st.sidebar.form('atomic_evs_form', clear_on_submit=True):
+        selected_atomic_evs_str = st.selectbox('Does the log contain non-atomic events?', ['', 'No', 'Yes'])
+        disable_form_key = 'atomic_evs_form_disable'
+        st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
+
+        if not selected_atomic_evs_str:
+            st.stop()
+        else:
+            atomic_evs_str = selected_atomic_evs_str
+            st.session_state['atomic_evs_str'] = selected_atomic_evs_str
+            st.rerun()
+else:
+    st.sidebar.markdown(f'**Contains non-atomic events**: :blue[{atomic_evs_str}]')
+
+event_endtime_column = st.session_state['event_endtime_column']
+if atomic_evs_str == 'Yes':
+        if not event_endtime_column:
+            with st.sidebar.form('events_endtime_column_form', clear_on_submit=True):
+                selected_event_endtime_column = st.text_input('Please enter the event attribute containing the endtime for non-atomic events')
+                disable_form_key = 'events_endtime_column_form_disable'
+                st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
+            
+            if not selected_event_endtime_column:
+                st.stop()
+            else:
+                event_endtime_column = selected_event_endtime_column
+                st.session_state['event_endtime_column'] = selected_event_endtime_column
+                st.rerun()
+        else:
+            st.sidebar.write(f'**Event endtime column**: :blue[{event_endtime_column}]')
+else:
+    st.session_state['event_endtime_column'] = ''
+    event_endtime_column = ''
+
 
 path_to_ocel = Path(ocel_file_path).resolve()
 
@@ -149,7 +185,7 @@ if atomic_evs_str == 'Yes':
         objects_summary_df = update_object_lifecycle_end_for_non_atomic_events(objects_summary_df.copy(), event_to_object_relations_df.copy(),\
                                                                         events_df.copy(), event_endtime_column)
     else:
-        st.write('The event attribute specified for the endtime of non-atomic events was not found in the log and hence will not be considered. ')
+        st.sidebar.warning('The event attribute specified for the endtime of non-atomic events was not found in the log and hence will not be considered i.e., the events will be treated as atomic. ')
         atomic_evs = True
 else:
     atomic_evs = True
@@ -212,36 +248,67 @@ property_names_list = [ value + '-' + key for key,value in property_names_dict.i
 sampling_rates = ['Weekly', 'Monthly', 'Quarterly', 'Yearly']
 aggregation_modes = ['mean', 'min', 'max', 'sum']
 assignment_mechanisms = ['overlaps', 'contains', 'starting', 'ending']
-selected_properties = []
-selected_object_types = []
-selected_event_types = []
-resource_object_type = ''
 
-if first_iteration:
-    st.session_state['fi_object_types'] = object_types
-    st.session_state['fi_event_types'] = event_types
+aggregation_mode = st.session_state['aggregation_mode']
+sampling_rate = st.session_state['sampling_rate']
+assignment_mechanism = st.session_state['assignment_mechanism']
+int_start = st.session_state['int_start']
+int_end = st.session_state['int_end']
+selected_properties = st.session_state['selected_properties']
+selected_object_types = st.session_state['selected_object_types']
+selected_event_types = st.session_state['selected_event_types']
+resource_object_type = st.session_state['resource_object_type']
+selected_time_interval = None
+if not aggregation_mode or not sampling_rate or not assignment_mechanism or not int_start or not int_end or not selected_properties or not selected_object_types or not selected_event_types:
+    with st.sidebar.form("ocel_input_details_form", clear_on_submit=True):
+        selected_aggregation_mode = st.selectbox('Aggregation Function', aggregation_modes)
+        selected_sampling_rate = st.selectbox('Sampling Rate', sampling_rates)
+        selected_assignment_mechanism = st.selectbox('Assignment Mechanism', assignment_mechanisms)
+        selected_time_interval = st.date_input(
+            label = "Timeframe",
+            value= (first_event_timestamp,last_event_timestamp),
+            min_value = first_event_timestamp,
+            max_value = last_event_timestamp,
+            format= "YYYY-MM-DD"
+            )
+        if selected_time_interval:
+            selected_int_start = pd.to_datetime(selected_time_interval[0], utc=True) + pd.Timedelta('1s') 
+            selected_int_end = pd.to_datetime(selected_time_interval[1], utc=True) + pd.Timedelta('1D') -  pd.Timedelta('1s')
+        selected_selected_object_types = st.multiselect('Select one or more object type(s) to analyze',  object_types)
+        selected_selected_event_types = st.multiselect('Select one or more event type(s) to analyze',  event_types)
+        selected_selected_properties = st.multiselect('Select one or more properties to analyze', property_names_list)
+        disable_form_key = 'ocel_input_details_form_disable'
+        st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
 
-with st.sidebar.form("ocel_input_details_form"):
-    aggregation_mode = st.selectbox('Aggregation Function', aggregation_modes)
-    sampling_rate = st.selectbox('Sampling Rate', sampling_rates)
-    assignment_mechanism = st.selectbox('Assignment Mechanism', assignment_mechanisms)
-    time_interval = st.date_input(
-        label = "Timeframe",
-        value= (first_event_timestamp,last_event_timestamp),
-        min_value = first_event_timestamp,
-        max_value = last_event_timestamp,
-        format= "YYYY-MM-DD"
-        )
-    int_start = pd.to_datetime(time_interval[0], utc=True) + pd.Timedelta('1s') 
-    int_end = pd.to_datetime(time_interval[1], utc=True) + pd.Timedelta('1D') -  pd.Timedelta('1s')
-    selected_object_types = st.multiselect('Select one or more object type(s) to analyze',  st.session_state['fi_object_types'])
-    selected_event_types = st.multiselect('Select one or more event type(s) to analyze',  st.session_state['fi_event_types'])
-    selected_properties = st.multiselect('Select one or more properties to analyze', property_names_list)
-    disable_form_key = 'ocel_input_details_form_disable'
-    st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
-
-if not selected_properties or not selected_event_types or not selected_object_types:
-    st.stop()
+    if not selected_aggregation_mode or not selected_sampling_rate or not selected_assignment_mechanism or not selected_int_start or not selected_int_end or not selected_selected_properties or not selected_selected_object_types or not selected_selected_event_types:
+        st.stop()
+    else:
+        aggregation_mode = selected_aggregation_mode
+        sampling_rate = selected_sampling_rate
+        assignment_mechanism = selected_assignment_mechanism
+        int_start = selected_int_start
+        int_end = selected_int_end
+        selected_properties = selected_selected_properties
+        selected_object_types = selected_selected_object_types
+        selected_event_types = selected_selected_event_types
+        st.session_state['aggregation_mode'] = selected_aggregation_mode
+        st.session_state['sampling_rate'] = selected_sampling_rate
+        st.session_state['assignment_mechanism'] = selected_assignment_mechanism
+        st.session_state['int_start'] = selected_int_start
+        st.session_state['int_end'] = selected_int_end
+        st.session_state['selected_properties'] = selected_selected_properties
+        st.session_state['selected_object_types'] = selected_selected_object_types
+        st.session_state['selected_event_types'] = selected_selected_event_types
+        st.rerun()
+        
+else:
+    st.sidebar.write(f'**Aggregation Function**: :blue[{aggregation_mode}]')
+    st.sidebar.write(f'**Sampling Rate**: :blue[{sampling_rate}]')
+    st.sidebar.write(f'**Assignment Mechanism**: :blue[{assignment_mechanism}]')
+    st.sidebar.write(f'**Analysis Time Period**: :blue[{int_start.isoformat()} - {int_end.isoformat()}]')
+    st.sidebar.write(f'**Selected Object Types**: :blue[{selected_object_types}]')
+    st.sidebar.write(f'**Selected Event Types**: :blue[{selected_event_types}]')
+    st.sidebar.write(f'**Selected Properties**: :blue[{selected_properties}]')
 
 resource_properties_selected = False
 for property in selected_properties:
@@ -249,13 +316,20 @@ for property in selected_properties:
         resource_properties_selected = True
         break
 if resource_properties_selected:
-    with st.sidebar.form("resource_object_type_form"):
-        resource_object_type = st.selectbox('Select resource object type', selected_object_types)
-        disable_form_key = 'resource_object_type_form_disable'
-        st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
-
-if resource_properties_selected and not resource_object_type:
-    st.stop()
+    if not resource_object_type:
+        with st.sidebar.form("resource_object_type_form"):
+            selected_resource_object_type = st.selectbox('Select resource object type', [''] + selected_object_types)
+            disable_form_key = 'resource_object_type_form_disable'
+            st.form_submit_button('Confirm Selection', on_click=disable, args=(disable_form_key, ), disabled=st.session_state[disable_form_key])
+        
+        if not selected_resource_object_type:
+            st.stop()
+        else:
+            resource_object_type = selected_resource_object_type
+            st.session_state['resource_object_type'] = selected_resource_object_type
+            st.rerun()
+    else:
+        st.sidebar.write(f'**Selected Resource Object Type**: :blue[{resource_object_type}]')
 
 #map user input to backend variables
 selected_property_ids= []
@@ -496,16 +570,23 @@ with tabs[0]:
     create_plots_for_ts_collection(TS_collection, property_names_dict)
 
 
-tsa_technique = ''
-tsa_params = {}
-
-
+tsa_technique = st.session_state['tsa_technique']
 tsa_techniques = ['', 'Change Point Detection', 'Threshold Based Point Detection', 'Forecasting', 'Granger Causality']
-with st.sidebar.form("tsa_form"):
-    selected_tsa_technique = st.selectbox('TSA technique', tsa_techniques)
-    st.form_submit_button('Confirm Selection')
+
+
 if not tsa_technique:
-    st.stop()
+    with st.sidebar.form("tsa_form", clear_on_submit=True):
+        selected_tsa_technique = st.selectbox('TSA technique', tsa_techniques)
+        st.form_submit_button('Confirm Selection')
+
+    if not selected_tsa_technique:
+        st.stop()
+    else:
+        st.session_state['tsa_technique'] = selected_tsa_technique
+        tsa_technique = selected_tsa_technique
+        st.rerun()
+else:
+    st.sidebar.write(f'**TSA technique**: :blue[{tsa_technique}]')
 
 if not first_iteration:
     if change_point_idx_ts_dict and tsa_technique == 'Change Point Detection':
@@ -529,158 +610,211 @@ if tsa_technique != 'Forecasting' and not first_iteration and not ts_forecasts_d
 else:
     append_forecasts_to_ts = 'No'
 
-use_change_point_difference_as_lag = 'No'
-use_tbpd_results_as_ts_for_granger_causality = 'No'
-only_compare_threshold_ts = 'No'
-use_granger_causal_ts_as_exogenous_variables = 'No'
+use_change_point_difference_as_lag = st.session_state['use_change_point_difference_as_lag']
+use_tbpd_results_as_ts_for_granger_causality = st.session_state['use_tbpd_results_as_ts_for_granger_causality']
+only_compare_threshold_ts = st.session_state['only_compare_threshold_ts']
+use_granger_causal_ts_as_exogenous_variables = st.session_state['use_granger_causal_ts_as_exogenous_variables']
 
-with st.sidebar.form("tsa_params_form"):
-    if tsa_technique == 'Change Point Detection':
-        cost_models = ['','rbf', 'l1', 'l2']
-        model = st.selectbox('Cost Model', cost_models)
-        min_size = st.selectbox('Minimum Segment Length', list(range(1, math.floor(len(time_intervals)/2))), index=2)
-        jump = st.selectbox('Jump', list(range(1, math.floor(len(time_intervals)/2))))
-        penalty = st.selectbox('Penalty', [1,1.5,2,2.5,3], index=1)
-        if model:
-            tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
-    elif tsa_technique == 'Threshold Based Point Detection':
-        modes = ['','quantile', 'relative change', 'nsmallest', 'nlargest']
-        mode = st.selectbox('Measure', modes)
-    elif tsa_technique == 'Granger Causality':
-        additional_options = ['']
-        if not first_iteration and (change_point_idx_ts_dict or threshold_based_ts_dict) and append_forecasts_to_ts == 'No':
-            lag = None
-            if change_point_idx_ts_dict:
-                additional_options.append('Use change point differences as lags')
-            if threshold_based_ts_dict:
-                additional_options.append('Add time series generated from threshold based points to the collection of time series')
-                additional_options.append('Only use time series generated from threshold based points')
+tsa_params = st.session_state['tsa_params']
+mode = st.session_state['mode'] 
+comparison_operator = st.session_state['comparison_operator'] 
+threshold_1 = st.session_state['threshold_1'] 
+threshold_2 = st.session_state['threshold_2'] 
 
-            selected_additional_option = st.selectbox('Please select the previous analysis results to be used. Leave blank for none.', additional_options)
-            if selected_additional_option.startswith('Use'):
-                use_change_point_difference_as_lag = 'Yes'
-                use_tbpd_results_as_ts_for_granger_causality = 'No'
-                only_compare_threshold_ts = 'No'
-            elif selected_additional_option.startswith('Add'):
-                use_tbpd_results_as_ts_for_granger_causality = 'Yes'
-                use_change_point_difference_as_lag = 'No'
-                only_compare_threshold_ts = 'No'
-            elif selected_additional_option.startswith('Only'):
-                only_compare_threshold_ts = 'Yes'
-                use_change_point_difference_as_lag = 'No'
-                use_tbpd_results_as_ts_for_granger_causality = 'No'
+if not tsa_params:
+    with st.sidebar.form("tsa_params_form"):
+        if tsa_technique == 'Change Point Detection':
+            cost_models = ['','rbf', 'l1', 'l2']
+            model = st.selectbox('Cost Model', cost_models)
+            min_size = st.selectbox('Minimum Segment Length', list(range(1, math.floor(len(time_intervals)/2))), index=2)
+            jump = st.selectbox('Jump', list(range(1, math.floor(len(time_intervals)/2))))
+            penalty = st.selectbox('Penalty', [1,1.5,2,2.5,3], index=1)
+            if model:
+                tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
+        elif tsa_technique == 'Threshold Based Point Detection':
+            modes = ['','quantile', 'relative change', 'nsmallest', 'nlargest']
+            mode = st.selectbox('Measure', modes)
+        elif tsa_technique == 'Granger Causality':
+            additional_options = ['', 'None']
+            if not first_iteration and (change_point_idx_ts_dict or threshold_based_ts_dict) and append_forecasts_to_ts == 'No':
+                lag = None
+                if change_point_idx_ts_dict:
+                    additional_options.append('Use change point differences as lags')
+                if threshold_based_ts_dict:
+                    additional_options.append('Add time series generated from threshold based points to the collection of time series')
+                    additional_options.append('Only use time series generated from threshold based points')
+
+                selected_additional_option = st.selectbox('Please select the previous analysis results to be used', additional_options)
+                if selected_additional_option.startswith('Use'):
+                    use_change_point_difference_as_lag = 'Yes'
+                    use_tbpd_results_as_ts_for_granger_causality = 'No'
+                    only_compare_threshold_ts = 'No'
+                elif selected_additional_option.startswith('Add'):
+                    use_tbpd_results_as_ts_for_granger_causality = 'Yes'
+                    use_change_point_difference_as_lag = 'No'
+                    only_compare_threshold_ts = 'No'
+                elif selected_additional_option.startswith('Only'):
+                    only_compare_threshold_ts = 'Yes'
+                    use_change_point_difference_as_lag = 'No'
+                    use_tbpd_results_as_ts_for_granger_causality = 'No'
+                elif selected_additional_option == 'None':
+                    use_change_point_difference_as_lag = 'No'
+                    use_tbpd_results_as_ts_for_granger_causality = 'No'
+                    only_compare_threshold_ts = 'No'
             else:
                 use_change_point_difference_as_lag = 'No'
                 use_tbpd_results_as_ts_for_granger_causality = 'No'
                 only_compare_threshold_ts = 'No'
+                lag = st.multiselect('Lags', list(range(1,math.floor((len(time_intervals)-1) / 3 - 1))))
+                use_change_point_difference_as_lag = 'No'
+            
+            p_value_threshold = st.number_input('P-Value Threshold', min_value=0.01, max_value = 0.10, step=0.01,format="%.2f")
+        elif tsa_technique == 'Forecasting':
+            periods_to_predict = st.number_input('Forecasting Horizon (Number of periods to predict)', min_value=1, max_value=math.floor(len(time_intervals)/3), step=1, value=4)
+            if not first_iteration and ts_causal_factors_dict:
+                use_granger_causal_ts_as_exogenous_variables = st.selectbox('Do you wish to use previously detected granger causal timeseries as exogenous variables?', ['','Yes', 'No'])
+            else:
+                use_granger_causal_ts_as_exogenous_variables = 'No'
+            edit_advanced_arima_settings = st.selectbox('Do you wish to edit the parameters passed to AutoARIMA \
+                                                            (Only recommended if you are well-versed with AutoARIMA. \n Passing unsuitable parameters may cause errors.)', ['','Yes', 'No'])
+        st.form_submit_button('Confirm Selection')
+
+    if tsa_technique == 'Threshold Based Point Detection' and mode:
+
+        if mode in ['quantile', 'relative change']:
+            if not comparison_operator:
+                with st.sidebar.form('threshold_based_comparison_operator_form', clear_on_submit=True):
+                    comparison_operators = ['', 'between', 'greater or equal to', 'lesser or equal to']
+                    selected_comparison_operator = st.selectbox('Comparison operator', comparison_operators)
+                    st.form_submit_button('Confirm Selection')
+
+                if selected_comparison_operator:
+                    st.session_state['comparison_operator'] = selected_comparison_operator
+                    comparison_operator = selected_comparison_operator
+                    st.sidebar.markdown(f'Comparison operator: {comparison_operator}')
+                    st.rerun()
+                else:
+                    st.stop()
+            else:
+                st.sidebar.markdown(f'Comparison operator: {comparison_operator}')
         else:
-            use_change_point_difference_as_lag = 'No'
-            use_tbpd_results_as_ts_for_granger_causality = 'No'
-            only_compare_threshold_ts = 'No'
-            lag = st.multiselect('Lags', list(range(1,math.floor((len(time_intervals)-1) / 3 - 1))))
-            use_change_point_difference_as_lag = 'No'
-        
-        p_value_threshold = st.number_input('P-Value Threshold', min_value=0.01, max_value = 0.10, step=0.01,format="%.2f")
+            comparison_operator = None
+
+
+        if not threshold_1:
+            with st.sidebar.form('threshold_based_thresholds_form', clear_on_submit=True):
+                if mode in ['nsmallest', 'nlargest']:
+                    selected_threshold_1 = st.number_input('Threshold', min_value=1, max_value = len(time_intervals), step=1)
+                    selected_threshold_2 = None
+                elif mode == 'quantile':
+                    if comparison_operator == 'between':
+                        selected_threshold_1 = st.number_input('Lower Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
+                        selected_threshold_2 = st.number_input('Upper Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
+                    else:
+                        selected_threshold_1 = st.number_input('Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
+                        selected_threshold_2 = None
+                elif mode == 'relative change':
+                    if comparison_operator == 'between':
+                        selected_threshold_1 = st.number_input('Lower Threshold', step=0.001,format="%.3f")
+                        selected_threshold_1 = st.number_input('Upper Threshold', step=0.001,format="%.3f")
+                    else:
+                        selected_threshold_1 = st.number_input('Threshold', step=0.001,format="%.3f")
+                        selected_threshold_2 = None
+
+                st.form_submit_button('Confirm Selection')
+
+            if selected_threshold_1:
+                st.session_state['threshold_1'] = selected_threshold_1
+                threshold_1 = selected_threshold_1
+                st.sidebar.markdown(f'Threshold: {threshold_1}')
+                st.rerun()
+            else:
+                st.stop()
+
+            if comparison_operator == 'between':
+                if selected_threshold_2: 
+                    st.session_state['threshold_2'] = selected_threshold_2
+                    threshold_2 = selected_threshold_2
+                    st.sidebar.markdown(f'Lower Threshold: {threshold_1}, Upper Threshold: {threshold_2}')
+                    st.rerun()
+                else:
+                    st.stop()
+            
+        else:
+            if mode != 'between':
+                st.sidebar.markdown(f'Threshold: {threshold_1}')
+            else:
+                st.sidebar.markdown(f'Lower Threshold: {threshold_1}, Upper Threshold: {threshold_2}')
+
+        if comparison_operator == 'between' and threshold_1 > threshold_2:
+            st.sidebar.warning('Upper Threshold must be strictly greater than Lower Threshold')
+            st.stop()
+        if (comparison_operator != 'between' and threshold_1) or (threshold_2 and threshold_2 > threshold_1):
+            tsa_params = {'mode': mode, 'comparison_operator' : comparison_operator, 'threshold_1': threshold_1, 'threshold_2': threshold_2 }
+
+    elif tsa_technique == 'Forecasting' and edit_advanced_arima_settings:
+        if edit_advanced_arima_settings == 'Yes':
+            with st.sidebar.form('forecasting_arima_config_form'):
+                start_p = st.number_input('Starting value for order of AR model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
+                start_q = st.number_input('Starting value for order of MA model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
+                start_P = st.number_input('Starting value for order of AR model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=1)
+                start_Q = st.number_input('Starting value for order of MA model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=1)
+                max_p = st.number_input('Maximum value for order of AR model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=5)
+                max_q = st.number_input('Maximum value for order of MA model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=5)
+                max_P = st.number_input('Maximum value for order of AR model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
+                max_Q = st.number_input('Maximum value for order of MA model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
+                information_criterion_list = ['aicc', 'aic', 'bic', 'hqic', 'oob']
+                information_criterion = st.selectbox('Information Criteria by which to evaluate the model', information_criterion_list)
+                stationarity_tests = ['kpss', 'adf', 'pp']
+                test = st.selectbox('Stationarity test for timeseries', stationarity_tests)
+                maxiter = st.number_input('Maximum Number of iterations per timeseries for model evaluation', min_value=50, max_value=500, step=1, value=100)
+                st.form_submit_button('Confirm Selection')
+        else:
+            start_p = 2
+            start_q = 2
+            start_P = 1
+            start_Q = 1
+            max_p = 5
+            max_q = 5
+            max_P = 2
+            max_Q = 2
+            information_criterion = 'aicc'
+            test = 'kpss'
+            maxiter = 100
+
+        tsa_params = {'periods_to_predict': periods_to_predict, 'use_granger_causal_ts_as_exogenous_variables': use_granger_causal_ts_as_exogenous_variables, 'start_p': start_p, 'start_q': start_q, 'start_P': start_P,\
+                        'start_Q': start_Q, 'max_p': max_p, 'max_q': max_q, 'max_P': max_P, 'max_Q': max_Q, 'information_criterion': information_criterion, 'test': test, 'maxiter': maxiter}
+
+    elif tsa_technique == 'Granger Causality' and not first_iteration:
+        if not selected_additional_option:
+            st.stop()
         if lag or use_change_point_difference_as_lag=='Yes':
             tsa_params = {'lag': lag, 'p_value_threshold': p_value_threshold, 'use_change_point_difference_as_lag': use_change_point_difference_as_lag}
-    elif tsa_technique == 'Forecasting':
-        periods_to_predict = st.number_input('Forecasting Horizon (Number of periods to predict)', min_value=1, max_value=math.floor(len(time_intervals)/3), step=1, value=4)
-        if not first_iteration and ts_causal_factors_dict:
-            use_granger_causal_ts_as_exogenous_variables = st.selectbox('Do you wish to use previously detected granger causal timeseries as exogenous variables?', ['','Yes', 'No'])
-        else:
-            use_granger_causal_ts_as_exogenous_variables = 'No'
-        edit_advanced_arima_settings = st.selectbox('Do you wish to edit the parameters passed to AutoARIMA \
-                                                        (Only recommended if you are well-versed with AutoARIMA. \n Passing unsuitable parameters may cause errors.)', ['','Yes', 'No'])
-    st.form_submit_button('Confirm Selection')
-
-if tsa_technique == 'Threshold Based Point Detection' and mode:
-    comparison_operator = ''
-
-    if mode in ['quantile', 'relative change']:
-        with st.sidebar.form('threshold_based_comparison_operator_form'):
-            comparison_operators = ['', 'between', 'greater or equal to', 'lesser or equal to']
-            comparison_operator = st.selectbox('Comparison operator', comparison_operators)
-            st.form_submit_button('Confirm Selection')
-        if not comparison_operator:
-            st.stop()
-    else:
-        comparison_operator = None
+        if not tsa_params:
+            with st.sidebar.form('granger lag form'):
+                lag = st.multiselect('Lags', list(range(1,math.floor((len(time_intervals)-1) / 3 - 1))))
+                st.form_submit_button('Confirm Selection')
+            if lag:
+                tsa_params = {'lag': lag, 'p_value_threshold': p_value_threshold, 'use_change_point_difference_as_lag': 'No'}
 
 
-    with st.sidebar.form('threshold_based_thresholds_form'):
-        if mode in ['nsmallest', 'nlargest']:
-            threshold_1 = st.number_input('Threshold', min_value=1, max_value = len(time_intervals), step=1)
-            threshold_2 = None
-        elif mode == 'quantile':
-            if comparison_operator == 'between':
-                threshold_1 = st.number_input('Lower Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
-                threshold_2 = st.number_input('Upper Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
-            else:
-                threshold_1 = st.number_input('Threshold', min_value=0.0, max_value = 1.0, step=0.001,format="%.3f")
-                threshold_2 = None
-        elif mode == 'relative change':
-            if comparison_operator == 'between':
-                threshold_1 = st.number_input('Lower Threshold', step=0.001,format="%.3f")
-                threshold_1 = st.number_input('Upper Threshold', step=0.001,format="%.3f")
-            else:
-                threshold_1 = st.number_input('Threshold', step=0.001,format="%.3f")
-                threshold_2 = None
-
-        st.form_submit_button('Confirm Selection')
-
-    if threshold_2 and threshold_1 > threshold_2:
-        st.sidebar.warning('Upper Threshold must be strictly greater than Lower Threshold')
-    if (comparison_operator != 'between' and threshold_1) or (threshold_2 and threshold_2 > threshold_1):
-        tsa_params = {'mode': mode, 'comparison_operator' : comparison_operator, 'threshold_1': threshold_1, 'threshold_2': threshold_2 }
-
-elif tsa_technique == 'Forecasting' and edit_advanced_arima_settings:
-    if edit_advanced_arima_settings == 'Yes':
-        with st.sidebar.form('forecasting_arima_config_form'):
-            start_p = st.number_input('Starting value for order of AR model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
-            start_q = st.number_input('Starting value for order of MA model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
-            start_P = st.number_input('Starting value for order of AR model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=1)
-            start_Q = st.number_input('Starting value for order of MA model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=1)
-            max_p = st.number_input('Maximum value for order of AR model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=5)
-            max_q = st.number_input('Maximum value for order of MA model of non-seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=5)
-            max_P = st.number_input('Maximum value for order of AR model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
-            max_Q = st.number_input('Maximum value for order of MA model of seasonal component', min_value=0, max_value = len(time_intervals), step=1, value=2)
-            information_criterion_list = ['aicc', 'aic', 'bic', 'hqic', 'oob']
-            information_criterion = st.selectbox('Information Criteria by which to evaluate the model', information_criterion_list)
-            stationarity_tests = ['kpss', 'adf', 'pp']
-            test = st.selectbox('Stationarity test for timeseries', stationarity_tests)
-            maxiter = st.number_input('Maximum Number of iterations per timeseries for model evaluation', min_value=50, max_value=500, step=1, value=100)
-            st.form_submit_button('Confirm Selection')
-    else:
-        start_p = 2
-        start_q = 2
-        start_P = 1
-        start_Q = 1
-        max_p = 5
-        max_q = 5
-        max_P = 2
-        max_Q = 2
-        information_criterion = 'aicc'
-        test = 'kpss'
-        maxiter = 100
-
-    tsa_params = {'periods_to_predict': periods_to_predict, 'use_granger_causal_ts_as_exogenous_variables': use_granger_causal_ts_as_exogenous_variables, 'start_p': start_p, 'start_q': start_q, 'start_P': start_P,\
-                    'start_Q': start_Q, 'max_p': max_p, 'max_q': max_q, 'max_P': max_P, 'max_Q': max_Q, 'information_criterion': information_criterion, 'test': test, 'maxiter': maxiter}
-
-elif tsa_technique == 'Granger Causality' and not first_iteration and not tsa_params:
-    with st.sidebar.form('granger lag form'):
-        lag = st.multiselect('Lags', list(range(1,math.floor((len(time_intervals)-1) / 3 - 1))))
-        st.form_submit_button('Confirm Selection')
-    if lag:
-        tsa_params = {'lag': lag, 'p_value_threshold': p_value_threshold, 'use_change_point_difference_as_lag': 'No'}
+    if tsa_params:
+        st.session_state['tsa_params'] = tsa_params
+        st.session_state['use_change_point_difference_as_lag'] = use_change_point_difference_as_lag
+        st.session_state['use_tbpd_results_as_ts_for_granger_causality'] = use_tbpd_results_as_ts_for_granger_causality
+        st.session_state['only_compare_threshold_ts'] = only_compare_threshold_ts
+        st.session_state['use_granger_causal_ts_as_exogenous_variables'] = use_granger_causal_ts_as_exogenous_variables
+        st.rerun()
+else:
+    for key,value in tsa_params.items():
+        st.sidebar.write(f'**{key}**: :blue[{value}]')
+if not tsa_params:
+    st.stop()
 
 if not first_iteration and threshold_based_ts_dict and tsa_technique == 'Threshold Based Point Detection':
     if tbpd_params == '(' + ', '.join(str(x) for x in tsa_params.values() if x != None) + ')':
         st.error('Cannot run threshold based point detection using the same parameters twice on the same log.')
         st.stop()
-
-if not tsa_params:
-    st.stop()
-
 #constant time series i.e. where all time periods have the same value will not be considered for further analysis.
 #so we discard all such time series and assign remaining to a dict 'ar_ts_collection'.
 #We round the values to 3 decimal places before checking for constant values since they trigger errors in performing tsa ahead
@@ -690,6 +824,8 @@ for tsid, ts in TS_collection.items():
     if not len(ts.round(3).unique()) == 1:
         ar_ts_collection[tsid] = ts.copy()
 
+print(f'first iteration:  {first_iteration}')
+print(use_change_point_difference_as_lag)
 #Handle selected options for using analysis results from previous iterations in current iteration's analysis
 if not first_iteration:
     #create lists of change points for each time series
@@ -698,7 +834,9 @@ if not first_iteration:
             cp_df = cp_ts.copy()
             cp_df = cp_df.rename('cp').reset_index()
             change_point_indices_dict[tsid] = cp_df[cp_df['cp']==1].index.values.tolist()
-            
+        print('above')
+        print(change_point_indices_dict)
+        print('below')
     #append forecasts to time series is selected if option is selected
     if append_forecasts_to_ts == 'Yes':
         ar_ts_collection_with_forecasts = {}
@@ -763,7 +901,6 @@ if tsa_technique:
             for arname, arcollection in st.session_state['ar_history'].items():
                 with tabs[i]:
                     tsatechnique=arname.split('(')[0]
-                    print(tsatechnique)
                     visualize_analysis_results(st.session_state['ar_ts_history'][arname], arcollection, tsatechnique, property_names_dict, st.session_state['ar_params_history'][arname])
                     i = i + 1
     else:
@@ -824,6 +961,13 @@ if append_forecasts_to_ts == 'No' and use_tbpd_results_as_ts_for_granger_causali
         st.form_submit_button('Confirm Selection')
     if next_iteration == 'Yes':
         st.session_state['ocel'] = mod_ocel
+        st.session_state['tsa_params'] = {}
+        st.session_state['tsa_technique'] = ''
+        st.session_state['mode'] = ''
+        st.session_state['comparison_operator'] = ''
+        st.session_state['threshold_1'] = ''
+        st.session_state['threshold_2'] = ''
+        st.rerun()
     else:
         st.stop()
 else:

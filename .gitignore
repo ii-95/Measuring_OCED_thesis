@@ -11,3 +11,5 @@ backend/inputs.env
 backend/assets/temp/tmpwiz_2f5usqlite
 *.txt
 backend/assets/temp/placeholder.txt
+frontend/input_form.py
+backend/sttest.py
