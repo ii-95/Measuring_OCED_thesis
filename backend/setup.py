@@ -652,8 +652,8 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             ts_df = ts.copy()
             ts_df = ts_df.rename('values').to_frame()
             ar_df = ar_df.rename('values').to_frame()
-            ts_df['category'] = 'historic values'
-            ar_df['category'] = 'forecasts'
+            ts_df['category'] = 'Past values'
+            ar_df['category'] = 'Forecasts'
             joined_df = pd.concat([ts_df,ar_df])
             joined_df.index.name = 'time'
             joined_df = joined_df.reset_index()
