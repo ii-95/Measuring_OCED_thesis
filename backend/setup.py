@@ -6,25 +6,21 @@ from pandas.api.types import is_any_real_numeric_dtype
 import itertools
 import json
 from pathlib import Path
-import os
-from sktime.utils.plotting import plot_series
-import matplotlib.pyplot as plt
-import rustworkx as rx
-from rustworkx.visualization import graphviz_draw
 import graphviz
 import plotly.express as px
 import streamlit as st
+import datetime
 
 def agg(series, aggregation_mode, sampling_rate):
     if type(series) == pd.Series:
         if aggregation_mode == 'mean':
-            return series.resample(sampling_rate).mean()
+            return series.resample(sampling_rate, label='right', closed='right').mean()
         elif aggregation_mode == 'sum':
-            return series.resample(sampling_rate).sum()
+            return series.resample(sampling_rate, label='right', closed='right').sum()
         elif aggregation_mode == 'min':
-            return series.resample(sampling_rate).min()
+            return series.resample(sampling_rate, label='right', closed='right').min()
         elif aggregation_mode == 'max':
-            return series.resample(sampling_rate).max()
+            return series.resample(sampling_rate, label='right', closed='right').max()
         
 def get_events_df(ocel):
     events_df = ocel.events
@@ -196,11 +192,10 @@ def get_event_to_object_type_relations_df_map(event_to_object_relations_df, even
 # them so it's difficult to follow but it does so to achieve a much better performance level as compared to code that 
 # would have been more readable i.e. apply functions and similar. 
 # Using pandas vectorization was not applicable/possible in this scenario.
-@st.cache_data
-def get_preceding_events_df(_ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
+def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
                             event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
                             object_type_column = 'ocel:type'):
-    preceding_events_df = _ocel_extended_df.copy()
+    preceding_events_df = ocel_extended_df.copy()
     object_cols = [col for col in preceding_events_df.columns if object_type_column in col]
     df = preceding_events_df[object_cols]
     df = df.map(lambda d: d if isinstance(d, list) else [])
@@ -332,20 +327,60 @@ def get_preceding_events_df(_ocel_extended_df, object_types, atomic_evs, event_e
             preceding_events_df[f'preceding_events_time_excluding_{object_type}'] = preceding_events_endtime_excluding_type_arr_dict[object_type]
     return preceding_events_df
 
+def check_if_last_day_of_month(to_date):
+    delta = datetime.timedelta(days=1)
+    next_day = to_date + delta
+
+    return to_date.month != next_day.month
+
+def check_if_last_day_of_year(to_date):
+    delta = datetime.timedelta(days=1)
+    next_day = to_date + delta
+
+    return to_date.year != next_day.year
+
+def get_starting_offset_for_sampling_rate(n, sampling_rate):
+    if sampling_rate == 'D':
+        starting_offset = pd.Timedelta(0)
+    elif sampling_rate == 'W':
+        starting_offset = pd.tseries.offsets.Week(n, weekday=6, normalize=True)
+    elif sampling_rate == 'ME':
+        starting_offset = pd.tseries.offsets.MonthBegin(n, normalize=True)
+    elif sampling_rate == 'QE':
+        starting_offset = pd.tseries.offsets.QuarterBegin(1, normalize=True)
+    elif sampling_rate == 'YE':
+        starting_offset = pd.tseries.offsets.YearBegin(n, normalize=True)
+    return starting_offset
+
+def get_ending_offset_for_sampling_rate(sampling_rate):
+    if sampling_rate == 'D':
+        ending_offset = pd.Timedelta(0)
+    elif sampling_rate == 'W':
+        ending_offset = pd.tseries.offsets.Week(weekday=6, normalize=True)
+    elif sampling_rate == 'ME':
+        ending_offset = pd.tseries.offsets.MonthEnd(0, normalize=True)
+    elif sampling_rate == 'QE':
+        ending_offset = pd.tseries.offsets.QuarterEnd(0, normalize=True)
+    elif sampling_rate == 'YE':
+        ending_offset = pd.tseries.offsets.YearEnd(0, normalize=True)
+    return ending_offset
+
 def get_offset_for_sampling_rate(sampling_rate):
-    if sampling_rate == 'W':
+    if sampling_rate == 'D':
+        offset = pd.tseries.offsets.Day()
+    elif sampling_rate == 'W':
         offset = pd.tseries.offsets.Week(weekday=6, normalize=True)
     elif sampling_rate == 'ME':
-        offset = pd.tseries.offsets.MonthEnd(0, normalize=True)
+        offset = pd.tseries.offsets.MonthEnd(1, normalize=True)
     elif sampling_rate == 'QE':
-        offset = pd.tseries.offsets.QuarterEnd(0, normalize=True)
+        offset = pd.tseries.offsets.QuarterEnd(1, normalize=True)
     elif sampling_rate == 'YE':
-        offset = pd.tseries.offsets.YearEnd(0, normalize=True)
+        offset = pd.tseries.offsets.YearEnd(1, normalize=True)
     return offset
 #get list of time intervals according to the specified time interval and sampling rate
-def get_time_intervals(start_time, end_time, sampling_rate, offset):
-    start = (start_time - offset).normalize()
-    end = (end_time + offset).normalize()
+def get_time_intervals(start_time, end_time, sampling_rate, starting_offset, ending_offset):
+    start = (start_time - starting_offset).normalize()
+    end = (end_time + ending_offset).normalize()
     time_intervals = pd.interval_range(start, end, freq=sampling_rate)
     #time_intervals = list(pd.interval_range(start, end, freq=sampling_rate))
     #correct start of first interval
@@ -549,21 +584,52 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     
     return evs_to_time_df
 
-def create_plots_for_ts_collection(ts_collection, property_names_dict):
+def create_plots_for_ts_collection(ts_collection, property_names_dict, property_parameters_map, aggregation_mode):
     for tsid, ts in ts_collection.items():
         property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
         if property_id in property_names_dict.keys():
-            property_name = property_names_dict[property_id]
-        else:
-            property_name = ''
+            property_name_str = property_names_dict[property_id]
+            property_id_str = property_id
+        elif property_id.startswith('Threshold Based Points'):
+            property_id_str = property_id.split()[-1]
+            property_name = property_names_dict[property_id_str]
+            property_name_str = ' '.join(property_id.split()[:-1]) + ' ' + property_name
         non_temporal_parameters = tsid[1]
+        if property_id in property_parameters_map.keys():
+            property_parameters = property_parameters_map[property_id]
+        elif property_id.startswith('Threshold Based Points'):
+            property_parameters = property_parameters_map[property_id_str]
+        non_temporal_parameters_str = ''
         if isinstance(non_temporal_parameters, tuple):
-            non_temporal_parameters = ', '.join(non_temporal_parameters)
+            for i in range(0,len(property_parameters)):
+                non_temporal_parameters_str = non_temporal_parameters_str + ', ' + '**' + property_parameters[i] + '**: :blue[' + non_temporal_parameters[i] + ']'
+        else:
+            non_temporal_parameters_str = '**' + property_parameters[0] +   '**: :blue[' + non_temporal_parameters + ']'
+        non_temporal_parameters_str = non_temporal_parameters_str.lstrip(',')
+
+        aggregation_mode_str = ''
+        if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
+            aggregation_mode_str = aggregation_mode.capitalize() + ' '
         chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
         with st.container(border=True):
-            st.markdown(f'{property_name} ({property_id}), parameters: ({non_temporal_parameters})')
+            st.write(f'{aggregation_mode_str}**{property_name_str}** ({property_id_str})  \n{non_temporal_parameters_str}')
+            if st.button('View related events and/or objects', key=(tsid,'show_dfs_button_timeseries')):
+                show_related_events_and_objects(tsid, 'timeseries')
             st.plotly_chart(chart, key=tsid)
 
+@st.dialog('Related events and/or objects', width='large')
+def show_related_events_and_objects(tsid, type):
+    with st.container(key=(tsid,f'show_dfs_container_{type}'), height=500):
+        related_event_dfs = st.session_state['ts_related_events_and_objects_dfs'][tsid]['events']
+        related_object_dfs = st.session_state['ts_related_events_and_objects_dfs'][tsid]['objects']
+        if related_event_dfs:
+            st.write('Events')
+            for df in related_event_dfs:
+                st.table(df)
+        if related_object_dfs:
+            st.write('Objects')
+            for df in related_object_dfs:
+                st.table(df)
 
 def remap_keys(mapping):
     return [{'tsid':k, 'ar': v} for k, v in mapping.items()]
@@ -613,41 +679,51 @@ def convert_ar_to_json(ar_collection, technique_name):
     
     return json_ar_collection
 
-def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict, tsa_params):
+def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict, tsa_params, property_parameters_map, aggregation_mode):
     if technique_name in ['Change Point Detection', 'Threshold Based Point Detection']:
         for tsid, ts in ts_collection.items():
+            property_id = tsid[0]
+            property_name = property_names_dict[property_id]
             non_temporal_parameters = tsid[1]
-            property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
-            if property_id in property_names_dict.keys():
-                property_name = property_names_dict[property_id]
-            else:
-                property_name = ''
+            property_parameters = property_parameters_map[property_id]
+            non_temporal_parameters_str = ''
             if isinstance(non_temporal_parameters, tuple):
-                non_temporal_parameters = ', '.join(non_temporal_parameters)
+                for i in range(0,len(property_parameters)):
+                    non_temporal_parameters_str = non_temporal_parameters_str + ', ' + '**' + property_parameters[i] + '**: :blue[' + non_temporal_parameters[i] + ']'
+            else:
+                non_temporal_parameters_str = '**' + property_parameters[0] +   '**: :blue[' + non_temporal_parameters + ']'
+
+            non_temporal_parameters_str = non_temporal_parameters_str.lstrip(',')
             ar = ar_collection[tsid].copy()
             ts_df = ts.copy()
             ts_df.index.name = 'time'
             ts_df = ts_df.rename('values').reset_index()
+            aggregation_mode_str = ''
+            if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
+                aggregation_mode_str = aggregation_mode.capitalize() + ' '
             chart = px.line(ts_df, x='time', y='values', color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
             for index in ar:
                 chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="green")
             with st.container(border=True):
-                if technique_name == 'Change Point Detection':
-                    st.markdown(f'Change points for timeseries of {property_name}({property_id}) with parameters: {non_temporal_parameters}')
-                else:
-                    st.markdown(f'Threshold based points for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.write(f'{aggregation_mode_str}**{property_name}** ({property_id})  \n{non_temporal_parameters_str}')
+                if st.button('View related events and/or objects', key=(tsid,f'show_dfs_button_{str((technique_name,tsa_params))}')):
+                    show_related_events_and_objects(tsid, str((technique_name,tsa_params)))
                 st.plotly_chart(chart,key=(tsid,tsa_params))
-    
+
     elif technique_name == 'Forecasting':
         for tsid, ts in ts_collection.items():
             property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
-            if property_id in property_names_dict.keys():
-                property_name = property_names_dict[property_id]
-            else:
-                property_name = ''
+            property_name = property_names_dict[property_id]
             non_temporal_parameters = tsid[1]
+            property_parameters = property_parameters_map[property_id]
+            non_temporal_parameters_str = ''
             if isinstance(non_temporal_parameters, tuple):
-                non_temporal_parameters = ', '.join(non_temporal_parameters)
+                for i in range(0,len(property_parameters)):
+                    non_temporal_parameters_str = non_temporal_parameters_str + ', ' + '**' + property_parameters[i] + '**: :blue[' + non_temporal_parameters[i] + ']'
+            else:
+                non_temporal_parameters_str = '**' + property_parameters[0] +   '**: :blue[' + non_temporal_parameters + ']'
+
+            non_temporal_parameters_str = non_temporal_parameters_str.lstrip(',')
             ar_df = ar_collection[tsid].copy()
             ts_df = ts.copy()
             ts_df = ts_df.rename('values').to_frame()
@@ -657,39 +733,126 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             joined_df = pd.concat([ts_df,ar_df])
             joined_df.index.name = 'time'
             joined_df = joined_df.reset_index()
+            aggregation_mode_str = ''
+            if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
+                aggregation_mode_str = aggregation_mode.capitalize() + ' '
             chart = px.line(joined_df, x='time', y='values', color='category', color_discrete_sequence=['blue', 'darkred'], render_mode='svg').update_layout(yaxis_title=None)
             with st.container(border=True):
-                st.markdown(f'Forecasts for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.write(f'{aggregation_mode_str}**{property_name}** ({property_id})  \n{non_temporal_parameters_str}')
+                if st.button('View related events and/or objects', key=(tsid,f'show_dfs_button_{technique_name}')):
+                    show_related_events_and_objects(tsid, technique_name)
                 st.plotly_chart(chart, key=(tsid,tsa_params))
 
     
     elif technique_name == 'Granger Causality':
-        ar_collection.to_csv('gc_df_mod.csv')
         gc_df = ar_collection
         caused_tsid_list = gc_df['caused'].unique()
 
         for caused_tsid in caused_tsid_list:
             property_id = caused_tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
             if property_id in property_names_dict.keys():
-                property_name = property_names_dict[property_id]
-            else:
-                property_name = ''
+                property_name_str = property_names_dict[property_id]
+                property_id_str = property_id
+            elif property_id.startswith('Threshold Based Points'):
+                property_id_str = property_id.split()[-1]
+                property_name = property_names_dict[property_id_str]
+                property_name_str = ' '.join(property_id.split()[:-1]) + ' ' + property_name
             non_temporal_parameters = caused_tsid[1]
+            if property_id in property_parameters_map.keys():
+                property_parameters = property_parameters_map[property_id]
+            elif property_id.startswith('Threshold Based Points'):
+                property_parameters = property_parameters_map[property_id_str]
+            non_temporal_parameters_str = ''
             if isinstance(non_temporal_parameters, tuple):
-                non_temporal_parameters = ', '.join(non_temporal_parameters)
+                for i in range(0,len(property_parameters)):
+                    non_temporal_parameters_str = non_temporal_parameters_str + ', ' + property_parameters[i] + '= ' + non_temporal_parameters[i]
+            else:
+                non_temporal_parameters_str = property_parameters[0] + '= ' + non_temporal_parameters
+
+            non_temporal_parameters_str = non_temporal_parameters_str.lstrip(',')
+
+            st_non_temporal_parameters_str = ''
+            if isinstance(non_temporal_parameters, tuple):
+                for i in range(0,len(property_parameters)):
+                    st_non_temporal_parameters_str = st_non_temporal_parameters_str + ', ' + '**' + property_parameters[i] + '** : :blue[' + non_temporal_parameters[i] + ']'
+            else:
+                st_non_temporal_parameters_str = '**' + property_parameters[0] + '** : :blue[' + non_temporal_parameters + ']'
+
+            st_non_temporal_parameters_str = st_non_temporal_parameters_str.lstrip(',')
+
+            caused_tsid_str = f'{property_name_str} ({property_id_str}),  \n {non_temporal_parameters_str}'
+            aggregation_mode_str = ''
+            if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
+                aggregation_mode_str = aggregation_mode.capitalize() + ' '
             graph = graphviz.Digraph(graph_attr={'rankdir': 'LR'})
             caused_df = gc_df[gc_df['caused'] == caused_tsid]
             causing_arr = caused_df['causing'].values.tolist()
             lag_dict = dict(zip(caused_df['causing'], caused_df['lag']))
-            graph.node(str(caused_tsid), style='filled', fillcolor = 'lightblue')
+            graph.node(caused_tsid_str, style='filled', fillcolor = 'lightblue')
             for causing_tsid in causing_arr:
+                causing_property_id = causing_tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
+                if causing_property_id in property_names_dict.keys():
+                    causing_property_name_str = property_names_dict[causing_property_id]
+                    causing_property_id_str = causing_property_id
+                elif causing_property_id.startswith('Threshold Based Points'):
+                    causing_property_id_str = causing_property_id.split()[-1]
+                    causing_property_name = property_names_dict[causing_property_id_str]
+                    causing_property_name_str = ' '.join(causing_property_id.split()[:-1]) + ' ' + causing_property_name
+                causing_non_temporal_parameters = causing_tsid[1]
+                if causing_property_id in property_parameters_map.keys():
+                    causing_property_parameters = property_parameters_map[causing_property_id]
+                elif causing_property_id.startswith('Threshold Based Points'):
+                    causing_property_parameters = property_parameters_map[causing_property_id_str]
+                causing_non_temporal_parameters_str = ''
+                if isinstance(causing_non_temporal_parameters, tuple):
+                    for i in range(0,len(causing_property_parameters)):
+                        causing_non_temporal_parameters_str = causing_non_temporal_parameters_str + ', ' + causing_property_parameters[i] + '= ' + causing_non_temporal_parameters[i]
+                else:
+                    causing_non_temporal_parameters_str = causing_property_parameters[0] + '= ' + causing_non_temporal_parameters
+
+                causing_non_temporal_parameters_str = causing_non_temporal_parameters_str.lstrip(',')
+                causing_tsid_str = f'{causing_property_name_str} ({causing_property_id_str}), \n  {causing_non_temporal_parameters_str}'
                 lag_arr = lag_dict[causing_tsid]
                 if isinstance(lag_arr[0], tuple):
                     lag_str = ',    '.join(str(x).replace(',', '', 1).lstrip('(').replace('))',')',1) for x in lag_arr)
                 else:
                     lag_str = ', '.join(str(x) for x in lag_arr)
-                graph.node(str(causing_tsid), style='filled', fillcolor = 'lightgray')
-                graph.edge(str(causing_tsid), str(caused_tsid), lag_str)
+                graph.node(causing_tsid_str, style='filled', fillcolor = 'lightgray')
+                graph.edge(causing_tsid_str, caused_tsid_str, lag_str)
             with st.container(border=True):
-                st.markdown(f'Granger Causality for timeseries of {property_name} ({property_id}) with parameters: {non_temporal_parameters}')
+                st.write(f'{aggregation_mode_str}{property_name_str} ({property_id_str}),  \n {st_non_temporal_parameters_str}')
+                if st.button('View related events and/or objects', key=(caused_tsid,f'show_dfs_button_{technique_name}')):
+                    show_related_events_and_objects(caused_tsid, technique_name)
                 st.graphviz_chart(graph)
+
+def generate_related_events_and_objects(ts_collection, property_parameters_map, events_to_time_df, objects_to_time_df, event_types_to_df_map, object_types_to_df_map, atomic_evs, event_endtime_column,\
+                                   objects_summary_df, event_id_column = 'ocel:eid', object_id_column = 'ocel:oid', event_timestamp_column = 'ocel:timestamp'):
+    for tsid in ts_collection.keys():
+        related_dfs = {'events':[],'objects':[]}
+        property_id = tsid[0]
+        non_temporal_parameters = tsid[1]
+        for j, parameter_type in enumerate(property_parameters_map[property_id]):
+            if parameter_type == 'event type':
+                if isinstance(non_temporal_parameters, tuple):
+                    et = non_temporal_parameters[j]
+                else:
+                    et = non_temporal_parameters
+                et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)
+                if atomic_evs:
+                    et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column]]\
+                                                .rename(columns={event_timestamp_column:'timestamp', event_id_column:et})
+                else:
+                    et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column, event_endtime_column]]\
+                                                .rename(columns={event_timestamp_column:'start_timestamp', event_endtime_column:'end_timestamp', event_id_column:et})
+                related_dfs['events'].append(et_events_in_time_interval)
+            elif parameter_type == 'object type':
+                if isinstance(non_temporal_parameters, tuple):
+                    ot = non_temporal_parameters[j]
+                else:
+                    ot = non_temporal_parameters
+                ot_objects_in_time_interval = objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+                ot_objects_in_time_interval = objects_summary_df.merge(ot_objects_in_time_interval, how='inner', on = object_id_column)[[object_id_column, 'lifecycle_start', 'lifecycle_end']]
+                ot_objects_in_time_interval = ot_objects_in_time_interval.rename(columns={object_id_column:ot})
+                related_dfs['objects'].append(ot_objects_in_time_interval)
+            st.session_state['ts_related_events_and_objects_dfs'][tsid] = related_dfs
+        

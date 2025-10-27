@@ -15,7 +15,7 @@ def op1(selected_object_types, object_types_to_df_map, objects_to_time_df, sampl
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
             ts = df[ts_id]
-            ts = ts.resample(sampling_rate).sum()
+            ts = ts.resample(sampling_rate, label='right', closed='right').sum()
             return ts
     
     # Call function 'op1_iter' for each object type to produce respective count/frequency timeseries.

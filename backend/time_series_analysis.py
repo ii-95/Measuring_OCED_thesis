@@ -81,7 +81,10 @@ def get_seasonal_periodicities(ts_collection, min_seasonal_period, max_seasonal_
             prev_sp = max_seasonal_period*2 + 1 
             sp_list = []
             seasonal_diff_ts = ts.copy()
-            sp_candidates = range(max_seasonal_period, min_seasonal_period, -1)
+            if max_seasonal_period > min_seasonal_period:
+                sp_candidates = range(max_seasonal_period, min_seasonal_period-1, -1)
+            else:
+                sp_candidates = []
             for sp in sp_candidates:
                 ocsb_test = OCSBTest(sp)
                 if ocsb_test.estimate_seasonal_differencing_term(seasonal_diff_ts) and sp < prev_sp/2:
@@ -118,7 +121,11 @@ def get_first_diff_order(ts_collection, max_order = 2):
             ts_diff = ts.copy()
             for i in range(0, max_order + 1):
                 adf_result = adf.fit(ts_diff).get_fitted_params()["stationary"]
-                kpss_result = kpss.fit(ts_diff).get_fitted_params()["stationary"]
+                try:
+                    kpss_result = kpss.fit(ts_diff).get_fitted_params()["stationary"]
+                except:
+                    print(f'KPSS test cannot be applied on the time series: {tsid}. Thereby only ADF test will be used to test its stationarity.')
+                    kpss_result = True
                 if adf_result and kpss_result:
                     ts_to_diff_order_map[tsid] = i
                     break
@@ -180,7 +187,7 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
                         possible_lag = cp - cp_2
                         if possible_lag > 0 and possible_lag <= lag_limit:
                             lag_list.append(possible_lag)
-                            lag_cp_list.append((cp_2,cp))
+                            lag_cp_list.append((f'Causing CP: {cp_2}', f'Caused CP: {cp}'))
                 if not lag_list:
                     continue
             elif not lag:
@@ -198,7 +205,6 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
                 with contextlib.redirect_stdout(None):
                     gc = grangercausalitytests(df, maxlag=lag_list)
             except Exception as err:
-                print(tsid, tsid_2)
                 print(f'Warning: Cannot perform Granger Causality test for: ({tsid}, {tsid_2}) due to the following error: \n {err} \n the time series pair will be discarded from the results')
                 continue
             for i,l in enumerate(lag_list):

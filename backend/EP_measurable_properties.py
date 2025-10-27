@@ -15,7 +15,7 @@ def ep1(selected_event_types, event_types_to_df_map, events_to_time_df, sampling
             df = df[['assignment_mechanism_time', ts_id]]
             df = df.set_index('assignment_mechanism_time')
             ts = df[ts_id]
-            ts = ts.resample(sampling_rate).sum()
+            ts = ts.resample(sampling_rate, label='right', closed='right').sum()
             return ts
     
     # Call function 'ep1_iter' for each event type to produce respective count/frequency timeseries.
@@ -41,7 +41,6 @@ def ep2(selected_event_types, event_types_to_df_map, events_to_time_df, aggregat
         attr_df = attr_df.set_index('assignment_mechanism_time')
         ts = attr_df[ts_id]
         ts = agg(ts, aggregation_mode, sampling_rate)
-                
         return ts
 
     # Call function 'ep2_iter' for each combination of an event type and one of it's numerical attributes

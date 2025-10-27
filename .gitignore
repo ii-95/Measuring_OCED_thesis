@@ -5,11 +5,9 @@ backend/inputs.env
 /backend/backend
 *.json
 *.png
-*.txt
 *.sqlite
 *.csv
 backend/assets/temp/tmpwiz_2f5usqlite
-*.txt
-backend/assets/temp/placeholder.txt
 frontend/input_form.py
 backend/sttest.py
+backend/assets/analysis_results_plots/Threshold Based Point Detection - Copy/placeholder.txt
