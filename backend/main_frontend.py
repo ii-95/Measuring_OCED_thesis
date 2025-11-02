@@ -19,13 +19,16 @@ import json
 import datetime
 import streamlit as st
 import zipfile
-from zipfile import ZipFile
+from streamlit_js_eval import streamlit_js_eval
 pd.options.mode.copy_on_write = True
 warnings.simplefilter('ignore', InterpolationWarning)
 warnings.simplefilter('ignore', ValueWarning)
 load_dotenv(dotenv_path="inputs.env")
 st.set_page_config(layout="wide")
+st.set_page_config(page_title="Measuring OCED")
 
+if st.sidebar.button("Reset", width='stretch', type='primary', icon=":material/refresh:"):
+    streamlit_js_eval(js_expressions="parent.window.location.reload()")
 
 # Disable the submit button after it is clicked
 def disable(form_key):
@@ -627,7 +630,8 @@ if first_iteration:
 else:
     prev_iterations_data = st.session_state['prev_iterations_data']
     if not prev_iterations_data:
-        prev_iterations_data = op2(object_types, object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
+        objects_to_time_df_post_first_iteration = get_objects_to_time_df(objects_summary_df.copy(), time_intervals, 'overlaps')
+        prev_iterations_data = op2(object_types, object_types_to_df_map, objects_to_time_df_post_first_iteration, aggregation_mode, sampling_rate)
         st.session_state['prev_iterations_data'] = prev_iterations_data
 
 if "tabs" not in st.session_state:
@@ -742,7 +746,10 @@ with tabs[0]:
                 data=file,
                 file_name=f'timeseries_{input_ocel_filename}.zip',
                 mime="application/zip",
-                on_click = 'ignore'
+                on_click = 'ignore',
+                width='stretch',
+                type='primary',
+                icon=":material/download:"
             )
     create_plots_for_ts_collection(TS_collection, property_names_dict, property_parameters_map, aggregation_mode)
 
@@ -799,7 +806,10 @@ for arname, arcollection in st.session_state['ar_history'].items():
                 file_name=f'{arname}_results.json',
                 mime='application/json',
                 data= st.session_state['ar_json_history'][arname],
-                on_click = 'ignore'
+                on_click = 'ignore',
+                width='stretch',
+                type='primary',
+                icon=":material/download:"
             )
         visualize_analysis_results(st.session_state['ar_ts_history'][arname], arcollection, tsatechnique, property_names_dict, params, property_parameters_map, aggregation_mode)
     i = i + 1
@@ -1255,7 +1265,10 @@ if append_forecasts_to_ts == 'No' and use_tbpd_results_as_ts_for_granger_causali
             data=f,
             file_name=f'mod_ocel_{input_ocel_filename}_{current_timestamp}'.split('.')[0] + '.json',
             mime="application/json",
-            on_click = 'ignore'
+            on_click = 'ignore',
+            width='stretch',
+            type='primary',
+            icon=":material/download:"
         )
     with st.sidebar.form('next_iteration'):
         next_iteration = st.selectbox('Do you wish to perform another round of analysis?', ['','Yes', 'No'])

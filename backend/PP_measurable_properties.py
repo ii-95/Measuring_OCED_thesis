@@ -36,6 +36,8 @@ def pp1(selected_event_types, preceding_events_df, event_types, events_to_time_d
         if event_type in selected_event_types:
             type_wt_df = wt_df[wt_df[event_type_column] == event_type]
             type_wt_df = type_wt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            if type_wt_df.empty:
+                continue
             pp1_dict[event_type] = pp1_iter(event_type, type_wt_df)
 
     return pp1_dict
@@ -75,6 +77,8 @@ def pp2(selected_event_types, preceding_events_df, event_types, events_to_time_d
         if event_type in selected_event_types:
             type_st_df = st_df[st_df[event_type_column] == event_type]
             type_st_df = type_st_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            if type_st_df.empty:
+                continue
             pp2_dict[event_type] = pp2_iter(event_type, type_st_df)
         
     return pp2_dict
@@ -103,6 +107,8 @@ def pp3(selected_event_types, event_types_to_df_map, events_to_time_df, aggregat
             svt_df = event_type_df.copy()
             svt_df['service_time'] = svt_df[event_endtime_column] - event_type_df[event_timestamp_column]
             svt_df = events_to_time_df.merge(svt_df, on=event_id_column, how='inner', suffixes=('_2', None))
+            if svt_df.empty:
+                continue
             pp3_dict[event_type] = pp3_iter(event_type, svt_df)
     return pp3_dict
 
@@ -148,6 +154,8 @@ def pp4(selected_event_types, pp1_dict, preceding_events_df, event_types, event_
             if event_type in selected_event_types:
                 type_sjt_df = sjt_df[sjt_df[event_type_column] == event_type]
                 type_sjt_df = type_sjt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+                if type_sjt_df.empty:
+                    continue
                 pp4_dict[event_type] = pp4_iter(event_type, type_sjt_df)
 
     return pp4_dict
@@ -199,6 +207,8 @@ def pp5(selected_event_types, preceding_events_df, event_types, event_endtime_co
         if event_type in selected_event_types:
             type_ft_df = ft_df[ft_df[event_type_column] == event_type]
             type_ft_df = type_ft_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            if type_ft_df.empty:
+                continue
             pp5_dict[event_type] = pp5_iter(event_type, type_ft_df)
 
     return pp5_dict
@@ -248,6 +258,8 @@ def pp6(selected_event_types, selected_object_types, preceding_events_df, event_
             
             combo_pt_df.loc[combo_pt_df['pooling_time'].isnull(), 'pooling_time'] = pd.Timedelta(0)
             combo_pt_df = combo_pt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            if combo_pt_df.empty:
+                continue
             pp6_dict[(event_type,object_type)] = pp6_iter(event_type, combo_pt_df)
         
     return pp6_dict
@@ -302,6 +314,8 @@ def pp7(selected_event_types, selected_object_types, preceding_events_df, event_
             combo_lt_df.loc[combo_lt_df['lagging_time'].isnull(), 'lagging_time'] = pd.Timedelta(0)
             combo_lt_df.loc[combo_lt_df['lagging_time'] < pd.Timedelta(0), 'lagging_time'] = pd.Timedelta(0)
             combo_lt_df = combo_lt_df.merge(events_to_time_df, on = event_id_column, how = 'inner')
+            if combo_lt_df.empty:
+                continue
             pp7_dict[(event_type,object_type)] = pp7_iter(event_type, combo_lt_df)
         
     return pp7_dict

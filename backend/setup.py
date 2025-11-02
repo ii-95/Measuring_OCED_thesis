@@ -520,11 +520,15 @@ def get_objects_to_time_df(objects_summary_df, time_intervals, assignment_mechan
 
     if assignment_mechanism == 'starting':
         objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_start']]
+        objs_to_time_df = objs_to_time_df[(objs_to_time_df['lifecycle_start'] > time_intervals[0].left) \
+                                                & (objs_to_time_df['lifecycle_start'] <= time_intervals[-1].right)]
         objs_to_time_df = objs_to_time_df\
             .rename(columns={'lifecycle_start': 'assignment_mechanism_time'})
 
     elif assignment_mechanism == 'ending':
         objs_to_time_df = objects_summary_df[[object_id_column, 'lifecycle_end']]
+        objs_to_time_df = objs_to_time_df[(objs_to_time_df['lifecycle_end'] > time_intervals[0].left) \
+                                                & (objs_to_time_df['lifecycle_end'] <= time_intervals[-1].right)]
         objs_to_time_df = objs_to_time_df\
             .rename(columns={'lifecycle_end': 'assignment_mechanism_time'})
 
@@ -553,7 +557,7 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     if atomic_evs:
         evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
         evs_to_time_df = evs_to_time_df[(evs_to_time_df[event_timestamp_column] > time_intervals[0].left) \
-            & (evs_to_time_df[event_timestamp_column] <= time_intervals[-1].right)]
+                                            & (evs_to_time_df[event_timestamp_column] <= time_intervals[-1].right)]
         evs_to_time_df = evs_to_time_df.rename(columns={event_timestamp_column: 'assignment_mechanism_time'})
     else:
         #if all events are not atomic then we need to use the respective strategy for assigning
@@ -562,10 +566,14 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
 
         if assignment_mechanism == 'starting':
             evs_to_time_df = events_df[[event_id_column, event_timestamp_column]]
+            evs_to_time_df = evs_to_time_df[(evs_to_time_df[event_timestamp_column] > time_intervals[0].left) \
+                                                & (evs_to_time_df[event_timestamp_column] <= time_intervals[-1].right)]
             evs_to_time_df = evs_to_time_df.rename(columns={event_timestamp_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'ending':
             evs_to_time_df = events_df[[event_id_column, event_endtime_column]]
+            evs_to_time_df = evs_to_time_df[(evs_to_time_df[event_endtime_column] > time_intervals[0].left) \
+                                            & (evs_to_time_df[event_endtime_column] <= time_intervals[-1].right)]
             evs_to_time_df = evs_to_time_df.rename(columns={event_endtime_column: 'assignment_mechanism_time'})
 
         elif assignment_mechanism == 'contains':
@@ -703,7 +711,7 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
                 aggregation_mode_str = aggregation_mode.capitalize() + ' '
             chart = px.line(ts_df, x='time', y='values', color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
             for index in ar:
-                chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="green")
+                chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="lightgreen")
             with st.container(border=True):
                 st.write(f'{aggregation_mode_str}**{property_name}** ({property_id})  \n{non_temporal_parameters_str}')
                 if st.button('View related events and/or objects', key=(tsid,f'show_dfs_button_{str((technique_name,tsa_params))}')):
@@ -840,10 +848,10 @@ def generate_related_events_and_objects(ts_collection, property_parameters_map, 
                 et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)
                 if atomic_evs:
                     et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column]]\
-                                                .rename(columns={event_timestamp_column:'timestamp', event_id_column:et})
+                                                .rename(columns={event_timestamp_column:'timestamp', event_id_column:et}).sort_values(by='timestamp',ignore_index=True)
                 else:
                     et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column, event_endtime_column]]\
-                                                .rename(columns={event_timestamp_column:'start_timestamp', event_endtime_column:'end_timestamp', event_id_column:et})
+                                                .rename(columns={event_timestamp_column:'start_timestamp', event_endtime_column:'end_timestamp', event_id_column:et}).sort_values(by=['start_timestamp','end_timestamp'],ignore_index=True)
                 related_dfs['events'].append(et_events_in_time_interval)
             elif parameter_type == 'object type':
                 if isinstance(non_temporal_parameters, tuple):
@@ -852,7 +860,7 @@ def generate_related_events_and_objects(ts_collection, property_parameters_map, 
                     ot = non_temporal_parameters
                 ot_objects_in_time_interval = objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
                 ot_objects_in_time_interval = objects_summary_df.merge(ot_objects_in_time_interval, how='inner', on = object_id_column)[[object_id_column, 'lifecycle_start', 'lifecycle_end']]
-                ot_objects_in_time_interval = ot_objects_in_time_interval.rename(columns={object_id_column:ot})
+                ot_objects_in_time_interval = ot_objects_in_time_interval.rename(columns={object_id_column:ot}).sort_values(by=['lifecycle_start','lifecycle_end'], ignore_index=True)
                 related_dfs['objects'].append(ot_objects_in_time_interval)
             st.session_state['ts_related_events_and_objects_dfs'][tsid] = related_dfs
         

@@ -24,13 +24,14 @@ def rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, s
     df = event_to_object_relations_df[event_to_object_relations_df[object_type_column] == resource_object_type]
     df = df.merge(events_to_time_df, on = event_id_column, how='inner')
     rp2_dict = {}
-    ts_id= resource_object_type
-    df[ts_id] = 1
-    df = df[['assignment_mechanism_time', ts_id]]
-    df = df.set_index('assignment_mechanism_time')
-    ts = df[ts_id]
-    ts = ts.resample(sampling_rate, label='right', closed='right').sum()
-    rp2_dict[resource_object_type] = ts
+    if not df.empty:
+        ts_id= resource_object_type
+        df[ts_id] = 1
+        df = df[['assignment_mechanism_time', ts_id]]
+        df = df.set_index('assignment_mechanism_time')
+        ts = df[ts_id]
+        ts = ts.resample(sampling_rate, label='right', closed='right').sum()
+        rp2_dict[resource_object_type] = ts
     return rp2_dict
 
 #For each resource attribute, provides time series for the value of the attribute. 

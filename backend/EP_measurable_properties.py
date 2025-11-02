@@ -26,6 +26,8 @@ def ep1(selected_event_types, event_types_to_df_map, events_to_time_df, sampling
             #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
             #merge with event type table based on the event id
             df = events_to_time_df.merge(event_type_df, on=event_id_column, how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             ep1_dict[event_type] = ep1_iter(event_type, df)
     return ep1_dict
 
@@ -64,6 +66,8 @@ def ep2(selected_event_types, event_types_to_df_map, events_to_time_df, aggregat
                 #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
                 #merge with event type table based on the event id
                 df = events_to_time_df.merge(event_type_df, on=event_id_column, how='inner', suffixes=('_2', None))
+                if df.empty:
+                    continue
                 ep2_dict[(event_type, event_attribute)] = ep2_iter(event_type, event_attribute, df)
     return ep2_dict
 
@@ -93,6 +97,8 @@ def ep3(selected_event_types, event_object_count_df_map, events_to_time_df, aggr
             #get timestamps that represent interval/time-period assignment for events i.e. 'events_to_time_df' and 
             #merge with table containing the number of objects of each object type per event i.e. event_object_count_df
             df = events_to_time_df.merge(event_object_count_df, on = event_id_column, how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             ep3_dict[event_type] = ep3_iter(event_type, df)
     return ep3_dict
 
@@ -121,5 +127,7 @@ def ep4(selected_event_types, selected_object_types, event_object_combinations, 
             #get timestamps that represent interval/time-period assignments for events i.e. 'events_to_time_df' and 
             #merge with table containing the number of objects of each type per event i.e. event_object_count_df
             df = events_to_time_df.merge(event_object_count_df, on = event_id_column, how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             ep4_dict[(event_type,object_type)] = ep4_iter(event_type, object_type, df)
     return ep4_dict

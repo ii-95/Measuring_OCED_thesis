@@ -24,8 +24,10 @@ def op1(selected_object_types, object_types_to_df_map, objects_to_time_df, sampl
     for object_type, object_type_df in object_types_to_df_map.items():
         if object_type in selected_object_types:
             df = objects_to_time_df.merge(object_type_df[object_id_column], on = object_id_column,\
-                                            how='right', suffixes=('_2', None))\
+                                            how='inner', suffixes=('_2', None))\
                 .drop_duplicates()
+            if df.empty:
+                continue
             op1_dict[object_type] = op1_iter(object_type, df)
     return op1_dict
 
@@ -60,6 +62,8 @@ def op2(selected_object_types, object_types_to_df_map, objects_to_time_df, aggre
                 if not attr_df.empty:
                     #merge with object's time assignment df
                     attr_df = attr_df.merge(objects_to_time_df, on = object_id_column, how='inner')
+                    if attr_df.empty:
+                        continue
                     #only keep those rows where attribute to object assignment timestamp is less than object to time period
                     #assignment timestamp
                     attr_df = attr_df[attr_df[timestamp_column] <= attr_df['assignment_mechanism_time']]
@@ -99,6 +103,8 @@ def op3(selected_object_types, object_type_summary_df_map, objects_to_time_df, a
             #can be determined using this information.
             df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column, \
                                         how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             # Call function 'op3_iter' for each object type to produce respective timeseries for (total) 
             # number of events per object.
             # Map event type to time series in dictionary 'op3_dict'   
@@ -136,6 +142,8 @@ def op4(selected_event_types, selected_object_types, event_to_object_relations_d
             #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
             #merge with 'event_to_object_relations_df' which contains all related events and objects of the specified types.
             df = objects_to_time_df.merge(df, on= object_id_column, how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             # Call function 'op4_iter' for each combination of object type and event type in the log 
             # to produce respective timeseries for number of events of the type per object of the type.
             # Map event type to time series in dictionary 'op4_dict'   
@@ -167,6 +175,8 @@ def op5(selected_object_types, object_type_summary_df_map, objects_to_time_df, a
             #merge with object_type_summary_df which contains lifecycle duration of objects
             df = objects_to_time_df.merge(object_type_summary_df, on=object_id_column,\
                                         how='inner', suffixes=('_2', None))
+            if df.empty:
+                continue
             # Call function 'op5_iter' for each object type to produce respective timeseries for lifecycle duration
             # of objects of the specified type.
             # Map event type to time series in dictionary 'op5_dict'   
@@ -209,6 +219,8 @@ def op6(selected_object_types, object_interactions_df, events_to_time_df, aggreg
             interaction_count_df = combination_df.groupby(event_id_column).count().reset_index()
             #get timestamps of events according to assignment mechanism
             df = interaction_count_df.merge(events_to_time_df, on=event_id_column, how='inner')
+            if df.empty:
+                continue
             #generate time series for each combination
             op6_dict[object_to_object_type_combination] = op6_iter(object_to_object_type_combination, df)
     return op6_dict
