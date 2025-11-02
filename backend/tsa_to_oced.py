@@ -54,7 +54,9 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
                         {'name': 'property_name', 'value': property_name, 'time': '1970-01-01T00:00:00.000Z'},\
                         {'name': 'non_temporal_parameters', 'value': non_temporal_parameters_str, 'time': '1970-01-01T00:00:00.000Z'}]
         #get time series values, convert to iso string format and add to attributes dict of the time series object
-        ts_df = ts.rename('value').to_frame().reset_index().rename(columns={'index': 'time'})
+        ts_df = ts.rename('value').to_frame()
+        ts_df.index.name = 'time'
+        ts_df = ts_df.reset_index()
         ts_df['time'] = ts_df['time'].map(lambda x: x.isoformat().replace("+00:00", ".000Z"))
         ts_df['name'] = 'tsvalues'
         ts_df = ts_df[['name', 'value', 'time']]
@@ -177,7 +179,7 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
     json_events_df['attributes'] = json_events_df['attributes'].fillna('').apply(list)
 
 #attribute name contains the tsa technique name and a dictionary (converted to string) of all associated parameters
-    attr_name = tsa_technique + json.dumps(tsa_params)
+    attr_name = tsa_technique + '(' + ', '.join(str(x) for x in tsa_params.values() if x != None) + ')'
     if tsa_technique != 'Granger Causality':
         for tsid, ar in ar_collection.items():
             #get all relevant variable values
