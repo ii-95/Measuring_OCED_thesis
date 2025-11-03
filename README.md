@@ -4,7 +4,8 @@
 2. Install packages in ./requirements.txt using desired method (venv, conda, etc.)
 3. Place your OCEL (in .json format) in ./input_logs. Sample logs are already in the repository for testing the tool.
 4. Run the following command to launch the app in a browser (localhost:8501):
-    streamlit run backend/main_frontend.py
+
+    ```streamlit run backend/main_frontend.py```
 
 ## Notes:
 - Python 3.11 is recommended to avoid conflicts with packages in requirements.txt. Eventually the app will be dockerized to avoid conflicts.
