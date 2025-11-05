@@ -7,7 +7,7 @@ pd.options.mode.copy_on_write = True
 
 #Convert timeseries to OCED and plug back into original OCEL
 def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_end, aggregation_mode, sampling_rate, \
-                                 property_names_dict, property_parameters_map, events_to_time_df, objects_to_time_df,
+                                 property_names_dict, property_parameters_map, events_to_time_df, objects_to_time_df, overlapping_objects_to_time_df,
                                  event_types_to_df_map, object_types_to_df_map, event_id_column = 'ocel:eid', object_id_column = 'ocel:oid'):
     #load ocel components into dataframes
     json_objects_df = pd.DataFrame(ocel_json_dict['objects'])
@@ -74,45 +74,53 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
                                                                             {'name': 'property_name', 'type': 'string'},\
                                                                             {'name': 'non_temporal_parameters', 'type': 'string'},\
                                                                             {'name': 'tsvalues', 'type': 'float'}]}
-        #for each event type or object type in the non temporal parameters of the time series, connect the time series object
-        #to the original events or object of those types in the OCEL by adding a e2o or o2o qualifier containing the pertinent
+        #for the first parameter (either an event type or an object type) in the non temporal parameters of the time series, connect the time series object
+        #to the original events or object of that type in the OCEL by adding a e2o or o2o qualifier containing the pertinent
         #information regarding the time series i.e., sampling rate, agg mode, property name and non temporal parameters.
-        for j, parameter_type in enumerate(property_parameters_map[property_id]):
-            if parameter_type == 'event type':
-                if isinstance(non_temporal_parameters, tuple):
-                    et = non_temporal_parameters[j]
-                else:
-                    et = non_temporal_parameters
-                et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)[event_id_column].values
-                related_evs_json = json_events_df[json_events_df['id'].isin(et_events_in_time_interval)]['relationships']
-                if related_evs_json.isna().all():
-                    empty_column = pd.Series([[]] * len(related_evs_json), index=related_evs_json.index, name = 'relationships')
-                    related_evs_json = empty_column
-                related_evs_json = related_evs_json + pd.Series([[{'objectId': ts_obj_id, 'qualifier': qualifer_str}]] * len(related_evs_json), related_evs_json.index.values.tolist(), name='relationships')
-                json_events_df.loc[related_evs_json.index, 'relationships'] = related_evs_json
-            elif parameter_type == 'object type':
-                if isinstance(non_temporal_parameters, tuple):
-                    ot = non_temporal_parameters[j]
-                else:
-                    ot = non_temporal_parameters
+        primary_parameter_type = property_parameters_map[property_id][0]
+        if primary_parameter_type == 'event type':
+            if isinstance(non_temporal_parameters, tuple):
+                et = non_temporal_parameters[0]
+            else:
+                et = non_temporal_parameters
+            et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)[event_id_column].values
+            related_evs_json = json_events_df[json_events_df['id'].isin(et_events_in_time_interval)]['relationships']
+            if related_evs_json.isna().all():
+                empty_column = pd.Series([[]] * len(related_evs_json), index=related_evs_json.index, name = 'relationships')
+                related_evs_json = empty_column
+            related_evs_json = related_evs_json + pd.Series([[{'objectId': ts_obj_id, 'qualifier': qualifer_str}]] * len(related_evs_json), related_evs_json.index.values.tolist(), name='relationships')
+            json_events_df.loc[related_evs_json.index, 'relationships'] = related_evs_json
+        elif primary_parameter_type == 'object type':
+            if isinstance(non_temporal_parameters, tuple):
+                ot = non_temporal_parameters[0]
+            else:
+                ot = non_temporal_parameters
+            
+            if property_id not in ['op6', 'rp2']:
                 ot_objects_in_time_interval = objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+            else:
+                ot_objects_in_time_interval = overlapping_objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+            if property_id == 'op6':
+                ot_2 = non_temporal_parameters[1]
+                if ot != ot_2:
+                    ot_2_objects_in_time_interval = overlapping_objects_to_time_df.merge(object_types_to_df_map[ot_2][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+                    ot_objects_in_time_interval = pd.concat([ot_objects_in_time_interval, ot_2_objects_in_time_interval], ignore_index=True)
 
-                ts_related_objects_df = ot_objects_in_time_interval.rename('objectId').to_frame()
-                ts_related_objects_df['qualifier'] = qualifer_str
-                ts_related_objects_json = ts_related_objects_df.to_dict('records')
-                relationships_list[i] = ts_related_objects_json
+            ts_related_objects_df = ot_objects_in_time_interval.rename('objectId').to_frame()
+            ts_related_objects_df['qualifier'] = qualifer_str
+            ts_related_objects_json = ts_related_objects_df.to_dict('records')
+            relationships_list[i] = ts_related_objects_json
 
-                """  related_objs_json = json_objects_df[json_objects_df['id'].isin(ot_objects_in_time_interval.values)]['relationships']
-                if related_objs_json.isna().all():
-                    empty_column = pd.Series([[]] * len(related_objs_json), index=related_objs_json.index, name = 'relationships')
-                    related_objs_json = empty_column
-                related_objs_json = related_objs_json + pd.Series([[{'objectId': ts_obj_id, 'qualifier': qualifer_str}]] * len(related_objs_json), related_objs_json.index.values.tolist(), name='relationships')
-                json_objects_df.loc[related_objs_json.index, 'relationships'] = related_objs_json """
+            """  related_objs_json = json_objects_df[json_objects_df['id'].isin(ot_objects_in_time_interval.values)]['relationships']
+            if related_objs_json.isna().all():
+                empty_column = pd.Series([[]] * len(related_objs_json), index=related_objs_json.index, name = 'relationships')
+                related_objs_json = empty_column
+            related_objs_json = related_objs_json + pd.Series([[{'objectId': ts_obj_id, 'qualifier': qualifer_str}]] * len(related_objs_json), related_objs_json.index.values.tolist(), name='relationships')
+            json_objects_df.loc[related_objs_json.index, 'relationships'] = related_objs_json """
             #connect time series that are only linked to objects (e.g. time series for object frequency)
             #to a dummy event. This is done to preserve these time series in the log during future iterations
             #as pm4py discards any objects that are not related to a event when reading a log.
 
-        if not 'event type' in property_parameters_map[property_id]:
             start_dummy_ev_idx = json_events_df.loc[json_events_df['id']=='start_dummy_event'].index.values[0]
             end_dummy_ev_idx = json_events_df.loc[json_events_df['id']=='end_dummy_event'].index.values[0]
             start_dummy_ev_relationships = json_events_df.loc[json_events_df['id']=='start_dummy_event', 'relationships'].iloc[0]

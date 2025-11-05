@@ -200,7 +200,7 @@ def op6(selected_object_types, object_interactions_df, events_to_time_df, aggreg
             return ts
     
     op6_dict = {}
-    obj_intr_df = object_interactions_df
+    obj_intr_df = object_interactions_df.copy()
     #remove all duplicate interactions from obj_intr_df
     obj_intr_df['object_type_pairs'] = [(tuple(sorted(filter(None, x)))) for x in obj_intr_df\
                                                    [[object_type_column, f'{object_type_column}_2']].to_numpy()]

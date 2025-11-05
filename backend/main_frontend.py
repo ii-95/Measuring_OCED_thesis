@@ -43,7 +43,7 @@ for form_key in form_keys:
 session_state_variables = {'ocel_file_path':{}, 'non_atomic_evs_str':'', 'resource_obj_str': '', 'event_endtime_column':'', 'ocel_json_dict': {},  'events_df' : '', \
                             'event_types' : '', 'object_types' : '', 'event_object_combinations' : '', 'objects_summary_df' : '', 'event_to_object_relations_df' : '', \
                             'objects_df' : '', 'object_changes_df' : '', 'first_event_timestamp':'', 'last_event_timestamp':'', 'aggregation_mode':'', 'sampling_rate':'',\
-                            'assignment_mechanism':'', 'int_start':'', 'time_intervals':'', 'events_to_time_df':'', 'objects_to_time_df':'', 'object_types_to_df_map':{},\
+                            'assignment_mechanism':'', 'int_start':'', 'time_intervals':'', 'events_to_time_df':'', 'objects_to_time_df':'', 'overlapping_objects_to_time_df':'', 'object_types_to_df_map':{},\
                             'event_types_to_df_map':{}, 'min_seasonal_period':'', 'max_seasonal_period':'', 'TS_collection':{}, 'prev_iterations_data':{},\
                             'change_point_indices_dict' : {}, 'ts_causal_factors_dict' : {}, 'change_point_idx_ts_dict' : {}, 'threshold_based_ts_dict' : {}, 'ts_forecasts_df' : '',\
                             'granger_df':'', 'forecast_column':'', 'ar_collection':{}, 'ts_mod_ocel_json_dict': {}, 'mod_ocel_json_dict' : {}, 'mod_ocel':'',\
@@ -280,7 +280,7 @@ property_names_dict = {
                     'rp3': 'Resource Attribute'
                     }
 
-# this dict is used in the conversion of time series to OCED
+
 property_parameters_map = {
                     'ep1': ['event type'],\
                     'ep2': ['event type', 'event attribute'], \
@@ -491,9 +491,16 @@ if not isinstance(events_to_time_df, pd.DataFrame):
     st.session_state['events_to_time_df'] = events_to_time_df
 
 objects_to_time_df = st.session_state['objects_to_time_df']
+overlapping_objects_to_time_df = st.session_state['overlapping_objects_to_time_df']
 if not isinstance(objects_to_time_df, pd.DataFrame):
     objects_to_time_df = get_objects_to_time_df(objects_summary_df.copy(), time_intervals, assignment_mechanism)
     st.session_state['objects_to_time_df'] = objects_to_time_df
+    if assignment_mechanism == 'overlaps':
+        overlapping_objects_to_time_df = objects_to_time_df.copy()
+    else:
+        overlapping_objects_to_time_df = get_objects_to_time_df(objects_summary_df.copy(), time_intervals, 'overlaps')
+    st.session_state['overlapping_objects_to_time_df'] = overlapping_objects_to_time_df
+
 
 object_types_to_df_map = st.session_state['object_types_to_df_map']
 if not object_types_to_df_map:
@@ -630,8 +637,7 @@ if first_iteration:
 else:
     prev_iterations_data = st.session_state['prev_iterations_data']
     if not prev_iterations_data:
-        objects_to_time_df_post_first_iteration = get_objects_to_time_df(objects_summary_df.copy(), time_intervals, 'overlaps')
-        prev_iterations_data = op2(object_types, object_types_to_df_map, objects_to_time_df_post_first_iteration, aggregation_mode, sampling_rate)
+        prev_iterations_data = op2(object_types, object_types_to_df_map, overlapping_objects_to_time_df, aggregation_mode, sampling_rate)
         st.session_state['prev_iterations_data'] = prev_iterations_data
 
 if "tabs" not in st.session_state:
@@ -731,7 +737,7 @@ if not first_iteration:
         st.session_state['tbpd_params_list'] = tbpd_params_list
 
 if first_iteration:
-    generate_related_events_and_objects(TS_collection, property_parameters_map, events_to_time_df, objects_to_time_df, event_types_to_df_map, object_types_to_df_map, atomic_evs, event_endtime_column, objects_summary_df)
+    generate_related_events_and_objects(TS_collection, property_parameters_map, events_to_time_df, objects_to_time_df, overlapping_objects_to_time_df, event_types_to_df_map, object_types_to_df_map, atomic_evs, event_endtime_column, objects_summary_df)
 
     with zipfile.ZipFile(f"backend/assets/temp/timeseriesdata_{input_ocel_filename}.zip", "w") as ts_zf:
         for tsid, ts in TS_collection.items():
@@ -1229,8 +1235,8 @@ if append_forecasts_to_ts == 'No' and use_tbpd_results_as_ts_for_granger_causali
     if not ts_mod_ocel_json_dict:
         if first_iteration:
             ts_mod_ocel_json_dict = insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_end, aggregation_mode, sampling_rate, \
-                                                property_names_dict, property_parameters_map, events_to_time_df.copy(), objects_to_time_df.copy(),
-                                                event_types_to_df_map, object_types_to_df_map)
+                                                property_names_dict, property_parameters_map, events_to_time_df.copy(), objects_to_time_df.copy(),\
+                                                overlapping_objects_to_time_df.copy(), event_types_to_df_map, object_types_to_df_map)
         else:
             ts_mod_ocel_json_dict = ocel_json_dict
         st.session_state['ts_mod_ocel_json_dict'] = ts_mod_ocel_json_dict

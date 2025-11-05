@@ -19,13 +19,13 @@ def rp1(ep4_dict, resource_object_type):
 #Generates a single time series for the number of active resource per time period (regardless of event type).
 #Time series is stored in a dict nevertheless to maintain consistent interfacing with external functions.
 def rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, sampling_rate,  \
-        event_id_column = 'ocel:eid', object_type_column = 'ocel:type'):
+        event_id_column = 'ocel:eid', object_type_column = 'ocel:type', object_id_column = 'ocel:oid'):
      
     df = event_to_object_relations_df[event_to_object_relations_df[object_type_column] == resource_object_type]
     df = df.merge(events_to_time_df, on = event_id_column, how='inner')
     rp2_dict = {}
     if not df.empty:
-        ts_id= object_type_column
+        ts_id= object_id_column
         df = df[['assignment_mechanism_time', ts_id]]
         df = df.set_index('assignment_mechanism_time')
         ts = df[ts_id]

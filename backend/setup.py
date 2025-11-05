@@ -833,34 +833,48 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
                     show_related_events_and_objects(caused_tsid, technique_name)
                 st.graphviz_chart(graph)
 
-def generate_related_events_and_objects(ts_collection, property_parameters_map, events_to_time_df, objects_to_time_df, event_types_to_df_map, object_types_to_df_map, atomic_evs, event_endtime_column,\
-                                   objects_summary_df, event_id_column = 'ocel:eid', object_id_column = 'ocel:oid', event_timestamp_column = 'ocel:timestamp'):
+def generate_related_events_and_objects(ts_collection, property_parameters_map, events_to_time_df, objects_to_time_df, overlapping_objects_to_time_df,\
+                                        event_types_to_df_map, object_types_to_df_map, atomic_evs, event_endtime_column, objects_summary_df, \
+                                        event_id_column = 'ocel:eid', object_id_column = 'ocel:oid', event_timestamp_column = 'ocel:timestamp'):
     for tsid in ts_collection.keys():
         related_dfs = {'events':[],'objects':[]}
         property_id = tsid[0]
         non_temporal_parameters = tsid[1]
-        for j, parameter_type in enumerate(property_parameters_map[property_id]):
-            if parameter_type == 'event type':
-                if isinstance(non_temporal_parameters, tuple):
-                    et = non_temporal_parameters[j]
-                else:
-                    et = non_temporal_parameters
-                et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)
-                if atomic_evs:
-                    et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column]]\
-                                                .rename(columns={event_timestamp_column:'timestamp', event_id_column:et}).sort_values(by='timestamp',ignore_index=True)
-                else:
-                    et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column, event_endtime_column]]\
-                                                .rename(columns={event_timestamp_column:'start_timestamp', event_endtime_column:'end_timestamp', event_id_column:et}).sort_values(by=['start_timestamp','end_timestamp'],ignore_index=True)
-                related_dfs['events'].append(et_events_in_time_interval)
-            elif parameter_type == 'object type':
-                if isinstance(non_temporal_parameters, tuple):
-                    ot = non_temporal_parameters[j]
-                else:
-                    ot = non_temporal_parameters
+        primary_parameter_type = property_parameters_map[property_id][0]
+        if primary_parameter_type == 'event type':
+            if isinstance(non_temporal_parameters, tuple):
+                et = non_temporal_parameters[0]
+            else:
+                et = non_temporal_parameters
+            et_events_in_time_interval = event_types_to_df_map[et].merge(events_to_time_df, how='inner', on = event_id_column)
+            if atomic_evs:
+                et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column]]\
+                                            .rename(columns={event_timestamp_column:'timestamp', event_id_column:et}).sort_values(by='timestamp',ignore_index=True)
+            else:
+                et_events_in_time_interval= et_events_in_time_interval[[event_id_column, event_timestamp_column]].rename({event_timestamp_column:'timestamp'})[[event_id_column, event_timestamp_column, event_endtime_column]]\
+                                            .rename(columns={event_timestamp_column:'start_timestamp', event_endtime_column:'end_timestamp', event_id_column:et}).sort_values(by=['start_timestamp','end_timestamp'],ignore_index=True)
+            related_dfs['events'].append(et_events_in_time_interval)
+        elif primary_parameter_type == 'object type':
+            if isinstance(non_temporal_parameters, tuple):
+                ot = non_temporal_parameters[0]
+            else:
+                ot = non_temporal_parameters
+            if property_id not in ['op6', 'rp2']:
                 ot_objects_in_time_interval = objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
-                ot_objects_in_time_interval = objects_summary_df.merge(ot_objects_in_time_interval, how='inner', on = object_id_column)[[object_id_column, 'lifecycle_start', 'lifecycle_end']]
-                ot_objects_in_time_interval = ot_objects_in_time_interval.rename(columns={object_id_column:ot}).sort_values(by=['lifecycle_start','lifecycle_end'], ignore_index=True)
-                related_dfs['objects'].append(ot_objects_in_time_interval)
-            st.session_state['ts_related_events_and_objects_dfs'][tsid] = related_dfs
+            else:
+                ot_objects_in_time_interval = overlapping_objects_to_time_df.merge(object_types_to_df_map[ot][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+
+            ot_objects_in_time_interval = objects_summary_df.merge(ot_objects_in_time_interval, how='inner', on = object_id_column)[[object_id_column, 'lifecycle_start', 'lifecycle_end']]
+            ot_objects_in_time_interval = ot_objects_in_time_interval.rename(columns={object_id_column:ot}).sort_values(by=['lifecycle_start','lifecycle_end'], ignore_index=True)
+            related_dfs['objects'].append(ot_objects_in_time_interval)
+            
+            if property_id == 'op6':
+                ot_2 = non_temporal_parameters[1]
+                if ot != ot_2:
+                    ot_2_objects_in_time_interval = overlapping_objects_to_time_df.merge(object_types_to_df_map[ot_2][object_id_column], how='inner', on = object_id_column).drop_duplicates()[object_id_column].drop_duplicates()
+                    ot_2_objects_in_time_interval = objects_summary_df.merge(ot_2_objects_in_time_interval, how='inner', on = object_id_column)[[object_id_column, 'lifecycle_start', 'lifecycle_end']]
+                    ot_2_objects_in_time_interval = ot_2_objects_in_time_interval.rename(columns={object_id_column:ot_2}).sort_values(by=['lifecycle_start','lifecycle_end'], ignore_index=True)
+                    related_dfs['objects'].append(ot_2_objects_in_time_interval)
+                    
+        st.session_state['ts_related_events_and_objects_dfs'][tsid] = related_dfs
         
