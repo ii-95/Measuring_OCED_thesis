@@ -14,7 +14,6 @@
 - If the number of data points is large (>200, likely if 'daily' sampling rate is selected), runtime for 'Forecasting' with exogenous variables will be very high (>> 1 minute per time series). In some cases, such as where a large number of lags are selected or the pool of time series is large, the same may apply for 'Granger Causality'.
 - Timeseries for service time and soujourn time are only generated if the log contains non-atomic events. As they are equal to 0 and waiting time, respectively in case of atomic events.
 - In case if you select a wrong option that cannot be changed after confirming, click the reset button (or refresh the webpage) and start over.
-- In case where are a time series has more than one event type and or object type associated with it (i.e., for properties ep4, op4, op6, pp6, pp7, rp1), the related events/objects displayed (by clicking on the button above the time series) are not always correct. This is a known issue and will be fixed soon. This has **no relevance** to the correctness of the timeseries itself regarding which there are no known issues.
 - Bug reports are highly appreciated :) 
 
 ## Reason for only supporting .json format:
