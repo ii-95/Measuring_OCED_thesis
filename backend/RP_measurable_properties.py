@@ -25,12 +25,11 @@ def rp2(event_to_object_relations_df, events_to_time_df, resource_object_type, s
     df = df.merge(events_to_time_df, on = event_id_column, how='inner')
     rp2_dict = {}
     if not df.empty:
-        ts_id= resource_object_type
-        df[ts_id] = 1
+        ts_id= object_type_column
         df = df[['assignment_mechanism_time', ts_id]]
         df = df.set_index('assignment_mechanism_time')
         ts = df[ts_id]
-        ts = ts.resample(sampling_rate, label='right', closed='right').sum()
+        ts = ts.resample(sampling_rate, label='right', closed='right').agg(set).str.len()
         rp2_dict[resource_object_type] = ts
     return rp2_dict
 
