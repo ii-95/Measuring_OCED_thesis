@@ -3,3 +3,7 @@ backend/testing.ipynb
 *.pyc
 backend/assets/temp/convert_ocel.json
 /backend/assets
+input_logs/congestion_500.json
+input_logs/hiring_log_high.json
+input_logs/hospital_log_high.json
+input_logs/congestion.json

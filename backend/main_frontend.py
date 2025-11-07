@@ -41,7 +41,7 @@ for form_key in form_keys:
         st.session_state[form_key] = False
 
 session_state_variables = {'ocel_file_path':{}, 'non_atomic_evs_str':'', 'resource_obj_str': '', 'event_endtime_column':'', 'ocel_json_dict': {},  'events_df' : '', \
-                            'event_types' : '', 'object_types' : '', 'event_object_combinations' : '', 'objects_summary_df' : '', 'event_to_object_relations_df' : '', \
+                            'event_types' : '', 'object_types' : '', 'event_object_combinations' : [], 'objects_summary_df' : '', 'event_to_object_relations_df' : '', \
                             'objects_df' : '', 'object_changes_df' : '', 'first_event_timestamp':'', 'last_event_timestamp':'', 'aggregation_mode':'', 'sampling_rate':'',\
                             'assignment_mechanism':'', 'int_start':'', 'time_intervals':'', 'events_to_time_df':'', 'objects_to_time_df':'', 'overlapping_objects_to_time_df':'', 'object_types_to_df_map':{},\
                             'event_types_to_df_map':{}, 'min_seasonal_period':'', 'max_seasonal_period':'', 'TS_collection':{}, 'prev_iterations_data':{},\
@@ -205,7 +205,7 @@ if not object_types:
 
 
 event_object_combinations =  st.session_state['event_object_combinations']
-if not isinstance(event_object_combinations, pd.DataFrame):
+if not event_object_combinations:
     event_object_combinations = get_event_object_combinations(ocel, event_type_column, object_type_column)
     st.session_state['event_object_combinations'] = event_object_combinations
 
@@ -574,7 +574,7 @@ if first_iteration:
             property_val_dicts_map['ep2'] = ep2(selected_event_types, event_types_to_df_map, events_to_time_df, aggregation_mode, sampling_rate, atomic_evs, event_endtime_column)
         if 'ep3' in selected_property_ids:
             property_val_dicts_map['ep3'] = ep3(selected_event_types, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
-        if 'ep4' in selected_property_ids:
+        if 'ep4' in selected_property_ids and event_object_combinations:
             property_val_dicts_map['ep4'] = ep4(selected_event_types, selected_object_types, event_object_combinations, event_object_count_df_map, events_to_time_df, aggregation_mode, sampling_rate)
 
         if 'op1' in selected_property_ids:
@@ -583,11 +583,11 @@ if first_iteration:
             property_val_dicts_map['op2'] = op2(selected_object_types, object_types_to_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
         if 'op3' in selected_property_ids:
             property_val_dicts_map['op3'] = op3(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
-        if 'op4' in selected_property_ids:
+        if 'op4' in selected_property_ids and event_object_combinations:
             property_val_dicts_map['op4'] = op4(selected_event_types, selected_object_types, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
         if 'op5' in selected_property_ids:
             property_val_dicts_map['op5'] = op5(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
-        if 'op6' in selected_property_ids:
+        if 'op6' in selected_property_ids and not object_interactions_df.empty:
             property_val_dicts_map['op6'] = op6(selected_object_types, object_interactions_df, events_to_time_df, aggregation_mode, sampling_rate)
 
         if 'pp1' in selected_property_ids:
@@ -606,9 +606,9 @@ if first_iteration:
         if 'pp5' in selected_property_ids:
             property_val_dicts_map['pp5'] = pp5(selected_event_types, preceding_events_df, event_types, event_endtime_column, atomic_evs, events_to_time_df,\
                         aggregation_mode, sampling_rate)
-        if 'pp6' in selected_property_ids:
+        if 'pp6' in selected_property_ids and event_object_combinations:
             property_val_dicts_map['pp6'] = pp6(selected_event_types, selected_object_types, preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
-        if 'pp7' in selected_property_ids:
+        if 'pp7' in selected_property_ids and event_object_combinations:
             property_val_dicts_map['pp7'] = pp7(selected_event_types, selected_object_types, preceding_events_df, event_object_combinations, events_to_time_df, aggregation_mode, sampling_rate)
 
         if resource_object_type:
@@ -1282,7 +1282,7 @@ if append_forecasts_to_ts == 'No' and use_tbpd_results_as_ts_for_granger_causali
     if next_iteration == 'Yes':
         st.session_state['ocel'] = mod_ocel
         reset_values_dict = {'ocel_json_dict': {}, 'tsa_params' : {}, 'tsa_technique' : '', 'mode' : '', 'comparison_operator' : '', 'threshold_1' : '', 'threshold_2' : '', 'events_df' : '', \
-                            'event_types' : '', 'object_types' : '', 'event_object_combinations' : '', 'objects_summary_df' : '', 'event_to_object_relations_df' : '', \
+                            'event_types' : '', 'object_types' : '', 'event_object_combinations' : [], 'objects_summary_df' : '', 'event_to_object_relations_df' : '', \
                             'objects_df' : '', 'object_changes_df' : '', 'first_event_timestamp':'', 'last_event_timestamp':'', 'events_to_time_df':'',\
                             'objects_to_time_df':'', 'object_types_to_df_map':{}, 'event_types_to_df_map':{}, 'TS_collection':{},\
                             'prev_iterations_data':{}, 'change_point_indices_dict' : {}, 'ts_causal_factors_dict' : {}, 'change_point_idx_ts_dict' : {},\
