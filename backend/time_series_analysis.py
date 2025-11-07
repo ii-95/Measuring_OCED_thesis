@@ -126,7 +126,7 @@ def get_first_diff_order(ts_collection, max_order = 2):
                 except:
                     print(f'KPSS test cannot be applied on the time series: {tsid}. Thereby only ADF test will be used to test its stationarity.')
                     kpss_result = True
-                if adf_result and kpss_result:
+                if adf_result and kpss_result or (adf_result and i == max_order) or (kpss_result and i == max_order):
                     ts_to_diff_order_map[tsid] = i
                     break
                 else:
