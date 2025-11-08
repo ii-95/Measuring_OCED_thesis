@@ -161,7 +161,7 @@ def get_object_type_summary_df_map(objects_summary_df, object_types_to_df_map, o
 
 # get all existing combinations of event types and object types in the ocel
 # returns an array of  lists where each list is a combination => [object type, event type] that occurs in the log
-def get_event_object_combinations(ocel, event_type_column='ocel:eid', object_type_column='ocel:oid'):
+def get_event_object_combinations(ocel, event_type_column='ocel:activity', object_type_column='ocel:type'):
     event_object_combinations = pm4py.ocel_objects_interactions_summary(ocel)
     if not event_object_combinations.empty:
         event_object_combinations = event_object_combinations[[event_type_column, object_type_column]]\
