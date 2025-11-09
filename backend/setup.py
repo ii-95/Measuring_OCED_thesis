@@ -105,7 +105,6 @@ def get_object_types_to_df_map(objects_df, object_changes_df, object_types, obje
      
     if '@@cumcount' in object_changes_df.columns:
         object_changes_df = object_changes_df.drop('@@cumcount', axis = 1)
-        object_changes_df
     objects_df['ocel:timestamp'] = pd.to_datetime('1970-01-01T00:00:00.000Z')
     objects_df['ocel:field'] = None
 

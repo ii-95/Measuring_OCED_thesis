@@ -112,7 +112,7 @@ def op3(selected_object_types, object_type_summary_df_map, objects_to_time_df, a
     return op3_dict
 
 
-def op4(selected_event_types, selected_object_types, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
+def op4(selected_event_types, selected_object_types, objects_df, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate, \
         event_id_column = 'ocel:eid', object_id_column= 'ocel:oid', event_type_column = 'ocel:activity', \
         object_type_column = 'ocel:type'):
     
@@ -131,6 +131,9 @@ def op4(selected_event_types, selected_object_types, event_to_object_relations_d
     op4_dict = {}
     for (event_type, object_type), event_to_object_relations_df in event_to_object_relations_df_map.items():
         if event_type in selected_event_types and object_type in selected_object_types:
+
+            object_type_df = objects_df[objects_df[object_type_column] == object_type][[object_id_column,object_type_column]]
+            objects_type_time_df = objects_to_time_df.merge(object_type_df, how='inner', on=[object_id_column])[[object_id_column, 'assignment_mechanism_time']]
             #For this property, we only wish to retain unique combinations of related events and objects 
             # of the specified types, irrespective of qualifiers and timestamps.
             df = event_to_object_relations_df[[event_id_column, event_type_column, 
@@ -139,9 +142,11 @@ def op4(selected_event_types, selected_object_types, event_to_object_relations_d
             #  Subsequently we count the number of events per object
             df = df.groupby(object_id_column).count().reset_index()[[object_id_column,object_type_column]]\
                                                             .rename(columns={object_type_column: 'event_count'})
-            #get timestamps that represent interval/time-period assignment for objects i.e. 'objects_to_time_df' and 
-            #merge with 'event_to_object_relations_df' which contains all related events and objects of the specified types.
-            df = objects_to_time_df.merge(df, on= object_id_column, how='inner', suffixes=('_2', None))
+
+            #merge with dataframe containing objects of specified type assigned to the respective time intervals.
+            #where an object has no related events of the specified type, assign value of '0' to the event_count.
+            df = objects_type_time_df.merge(df, on= object_id_column, how='left', suffixes=('_2', None)).replace(np.nan, 0)
+
             if df.empty:
                 continue
             # Call function 'op4_iter' for each combination of object type and event type in the log 

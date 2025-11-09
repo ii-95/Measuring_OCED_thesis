@@ -105,7 +105,7 @@ if not non_atomic_evs_str or not resource_obj_str:
             st.rerun()
 else:
     st.sidebar.markdown(f'**Contains non-atomic events**: :blue[{non_atomic_evs_str}]')
-    st.sidebar.markdown(f'**Contains object type representing resources/employees**: :blue[{non_atomic_evs_str}]')
+    st.sidebar.markdown(f'**Contains object type representing resources/employees**: :blue[{resource_obj_str}]')
 
 event_endtime_column = st.session_state['event_endtime_column']
 if non_atomic_evs_str == 'Yes':
@@ -584,7 +584,7 @@ if first_iteration:
         if 'op3' in selected_property_ids:
             property_val_dicts_map['op3'] = op3(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
         if 'op4' in selected_property_ids and event_object_combinations:
-            property_val_dicts_map['op4'] = op4(selected_event_types, selected_object_types, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
+            property_val_dicts_map['op4'] = op4(selected_event_types, selected_object_types, objects_df, event_to_object_relations_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
         if 'op5' in selected_property_ids:
             property_val_dicts_map['op5'] = op5(selected_object_types, object_type_summary_df_map, objects_to_time_df, aggregation_mode, sampling_rate)
         if 'op6' in selected_property_ids and not object_interactions_df.empty:
@@ -631,6 +631,8 @@ if first_iteration:
                         #padding the timeseries on both ends to align with specified intervals.
                         processed_ts = time_intervals.right.to_frame().merge(ts, left_index=True, right_index=True, how='left')\
                             .drop(columns=0).iloc[:,0]
+                        if property in ['ep1','op1','rp2']:
+                            processed_ts = processed_ts.replace(np.nan, 0)
                         if not processed_ts.isna().any():
                             TS_collection[(property, non_temporal_parameters)] = processed_ts
         st.session_state['TS_collection'] = TS_collection
