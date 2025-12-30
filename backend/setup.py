@@ -108,7 +108,8 @@ def get_object_types_to_df_map(objects_df, object_changes_df, object_types, obje
     objects_df['ocel:timestamp'] = pd.to_datetime('1970-01-01T00:00:00.000Z')
     objects_df['ocel:field'] = None
 
-    objects_df = pd.concat([objects_df,object_changes_df])
+    if not object_changes_df.empty:
+        objects_df = pd.concat([objects_df,object_changes_df])
 
     object_types_to_df_map = {}
     
@@ -142,7 +143,7 @@ def get_event_object_count_df_map(ocel, event_types_to_df_map, event_id_column =
     event_object_count_df = pd.DataFrame.from_dict(pm4py.ocel_objects_ot_count(ocel)).transpose()
     event_object_count_df.index.name = event_id_column
     event_object_count_df = event_object_count_df.reset_index()
-    event_object_count_df = event_object_count_df.replace(np.nan, 0)
+    event_object_count_df = event_object_count_df.replace(np.nan, 0.0)
     event_object_count_df_map = {}
 
     for event_type, event_type_df in event_types_to_df_map.items():
@@ -193,8 +194,7 @@ def get_event_to_object_type_relations_df_map(event_to_object_relations_df, even
 
 # Note: The function is not easy to read as it copies many columns of a dataframe into separate lists/arrays and manipulates
 # them so it's difficult to follow but it does so to achieve a much better performance level as compared to code that 
-# would have been more readable i.e. apply functions and similar. 
-# Using pandas vectorization was not applicable/possible in this scenario.
+# would have been more readable i.e. 'apply' functions and similar. 
 def get_preceding_events_df(ocel_extended_df, object_types, atomic_evs, event_endtime_column,\
                             event_id_column ='ocel:eid', event_timestamp_column = 'ocel:timestamp',\
                             object_type_column = 'ocel:type'):
@@ -595,7 +595,7 @@ def get_events_to_time_df(events_df, time_intervals, assignment_mechanism, event
     
     return evs_to_time_df
 
-def create_plots_for_ts_collection(ts_collection, property_names_dict, property_parameters_map, aggregation_mode):
+def create_plots_for_ts_collection(ts_collection, property_names_dict, property_parameters_map, aggregation_mode, assignment_mechanism):
     for tsid, ts in ts_collection.items():
         property_id = tsid[0].replace('\"','').replace("{", '_').replace('}', '_').replace(':','_')
         if property_id in property_names_dict.keys():
@@ -619,14 +619,48 @@ def create_plots_for_ts_collection(ts_collection, property_names_dict, property_
         non_temporal_parameters_str = non_temporal_parameters_str.lstrip(',')
 
         aggregation_mode_str = ''
-        if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
-            aggregation_mode_str = aggregation_mode.capitalize() + ' '
-        chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
+        if property_id in property_names_dict.keys():
+            if property_id not in ['ep1','op1','rp2']:
+                aggregation_mode_str = aggregation_mode.capitalize() + ' '
+            y_axis_title = f'{property_id_str.upper()} ({str(non_temporal_parameters)})'.replace('((', '(').replace('))', ')').replace('\'', '')
+            file_name = f'{property_names_dict[property_id]} ({str(non_temporal_parameters)})_{aggregation_mode}_{assignment_mechanism}'.replace('((', '(').replace('))', ')').replace('\'', '')
+        else:
+            file_name = f'Threshold Based Points_{property_id} ({str(non_temporal_parameters)})_{aggregation_mode}_{assignment_mechanism}'.replace('((', '(').replace('))', ')').replace('\'', '')
+            y_axis_title = f'TBP {property_id_str.upper()} ({str(non_temporal_parameters)})'.replace('((', '(').replace('))', ')').replace('\'', '')
+        config = {
+  'toImageButtonOptions': {
+    'format': 'png', # one of png, svg, jpeg, webp
+    'filename': file_name,
+    'scale':3 # Multiply title/legend/axis/canvas sizes by this factor
+  }
+}
+        chart = px.line(ts, color_discrete_sequence=['blue']).update_layout(xaxis_title='Time', yaxis_title= 'Aggregated Values', showlegend=False).update_layout(plot_bgcolor = "#f0f4f7",    margin=dict(
+        r=20
+    )).update_xaxes(
+mirror=True,
+    ticks='outside',
+    showline=True,
+    linecolor='darkgrey',
+    showgrid = True,
+    gridcolor="#e1e0e0",
+    tickcolor = 'black',
+    tickfont= dict(color='black'),
+    title_font_color = 'black',
+).update_yaxes(
+    mirror=True,
+    ticks='outside',
+    showline=True,
+    linecolor='darkgrey',
+    gridcolor="#e1e0e0",
+    tickcolor = 'black',
+    tickfont= dict(color='black'),
+    title_font_color = 'black',
+)
         with st.container(border=True):
             st.write(f'{aggregation_mode_str}**{property_name_str}** ({property_id_str})  \n{non_temporal_parameters_str}')
             if st.button('View related events and/or objects', key=(tsid,'show_dfs_button_timeseries')):
                 show_related_events_and_objects(tsid, 'timeseries')
-            st.plotly_chart(chart, key=tsid)
+            st.plotly_chart(chart, key=tsid, config = config)
 
 @st.dialog('Related events and/or objects', width='large')
 def show_related_events_and_objects(tsid, type):
@@ -678,8 +712,10 @@ def convert_ar_to_json(ar_collection, technique_name):
                 ar_series = ar_series.to_dict()
                 processed_ar_collection[tsid] = ar_series
         else:
-            processed_ar_collection = ar_collection
-        
+            processed_ar_collection = {}
+            for tsid, ar in ar_collection.items():
+                processed_ar_collection[tsid] = [idx+1 for idx in ar_collection[tsid]]
+
         json_ar_collection = json.dumps(remap_keys(processed_ar_collection), indent=4, ensure_ascii=False)
 
     elif technique_name == 'Granger Causality':
@@ -690,7 +726,7 @@ def convert_ar_to_json(ar_collection, technique_name):
     
     return json_ar_collection
 
-def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict, tsa_params, property_parameters_map, aggregation_mode):
+def visualize_analysis_results(ts_collection, ar_collection, technique_name, property_names_dict, tsa_params, property_parameters_map, aggregation_mode, assignment_mechanism):
     if technique_name in ['Change Point Detection', 'Threshold Based Point Detection']:
         for tsid, ts in ts_collection.items():
             property_id = tsid[0]
@@ -712,14 +748,45 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             aggregation_mode_str = ''
             if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
                 aggregation_mode_str = aggregation_mode.capitalize() + ' '
-            chart = px.line(ts_df, x='time', y='values', color_discrete_sequence=['blue']).update_layout(xaxis_title='time', yaxis_title=None, showlegend=False)
+            y_axis_title = f'{property_id.upper()} ({str(non_temporal_parameters)})'.replace('((', '(').replace('))', ')').replace('\'', '')
+            file_name = f'{property_names_dict[property_id]} ({str(non_temporal_parameters)})_{aggregation_mode}_{assignment_mechanism}'.replace('((', '(').replace('))', ')').replace('\'', '')
+            config = {
+                'toImageButtonOptions': {
+                    'format': 'png', # one of png, svg, jpeg, webp
+                    'filename': file_name,
+                    'scale':3 # Multiply title/legend/axis/canvas sizes by this factor
+                }
+                }
+
+            chart = px.line(ts_df, x='time', y='values', color_discrete_sequence=['blue']).update_layout(xaxis_title='Time', yaxis_title= 'Aggregated Values', showlegend=False).update_layout(plot_bgcolor = "#f0f4f7",    margin=dict(
+            r=20
+        )).update_xaxes(
+        mirror=True,
+            ticks='outside',
+            showline=True,
+            linecolor='darkgrey',
+            showgrid = True,
+            gridcolor="#e1e0e0",
+            tickcolor = 'black',
+            tickfont= dict(color='black'),
+            title_font_color = 'black',
+        ).update_yaxes(
+            mirror=True,
+            ticks='outside',
+            showline=True,
+            linecolor='darkgrey',
+            gridcolor="#e1e0e0",
+            tickcolor = 'black',
+            tickfont= dict(color='black'),
+            title_font_color = 'black',
+        )
             for index in ar:
-                chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="lightgreen")
+                chart = chart.add_vline(x=ts.index[index], line_width=2, line_dash="dash", line_color="darkgreen")
             with st.container(border=True):
                 st.write(f'{aggregation_mode_str}**{property_name}** ({property_id})  \n{non_temporal_parameters_str}')
                 if st.button('View related events and/or objects', key=(tsid,f'show_dfs_button_{str((technique_name,tsa_params))}')):
                     show_related_events_and_objects(tsid, str((technique_name,tsa_params)))
-                st.plotly_chart(chart,key=(tsid,tsa_params))
+                st.plotly_chart(chart,key=(tsid,tsa_params), config = config)
 
     elif technique_name == 'Forecasting':
         for tsid, ts in ts_collection.items():
@@ -747,12 +814,43 @@ def visualize_analysis_results(ts_collection, ar_collection, technique_name, pro
             aggregation_mode_str = ''
             if property_id in property_names_dict.keys() and property_id not in ['ep1','op1','rp2']:
                 aggregation_mode_str = aggregation_mode.capitalize() + ' '
-            chart = px.line(joined_df, x='time', y='values', color='category', color_discrete_sequence=['blue', 'darkred'], render_mode='svg').update_layout(yaxis_title=None)
+            y_axis_title = f'{property_id.upper()} ({str(non_temporal_parameters)})'.replace('((', '(').replace('))', ')').replace('\'', '')
+            file_name = f'{property_names_dict[property_id]} ({str(non_temporal_parameters)})_{aggregation_mode}_{assignment_mechanism}'.replace('((', '(').replace('))', ')').replace('\'', '')
+            config = {
+                'toImageButtonOptions': {
+                    'format': 'png', # one of png, svg, jpeg, webp
+                    'filename': file_name,
+                    'scale':3 # Multiply title/legend/axis/canvas sizes by this factor
+                }
+                }
+
+            chart = px.line(joined_df, x='time', y='values', color='category', color_discrete_sequence=['blue', 'darkred'], render_mode='svg').update_layout(xaxis_title='Time', yaxis_title= 'Aggregated Values', showlegend=False).update_layout(plot_bgcolor = "#f0f4f7",    margin=dict(
+            r=20
+        )).update_xaxes(
+        mirror=True,
+            ticks='outside',
+            showline=True,
+            linecolor='darkgrey',
+            showgrid = True,
+            gridcolor="#e1e0e0",
+            tickcolor = 'black',
+            tickfont= dict(color='black'),
+            title_font_color = 'black',
+        ).update_yaxes(
+            mirror=True,
+            ticks='outside',
+            showline=True,
+            linecolor='darkgrey',
+            gridcolor="#e1e0e0",
+            tickcolor = 'black',
+            tickfont= dict(color='black'),
+            title_font_color = 'black',
+        )
             with st.container(border=True):
                 st.write(f'{aggregation_mode_str}**{property_name}** ({property_id})  \n{non_temporal_parameters_str}')
                 if st.button('View related events and/or objects', key=(tsid,f'show_dfs_button_{technique_name}')):
                     show_related_events_and_objects(tsid, technique_name)
-                st.plotly_chart(chart, key=(tsid,tsa_params))
+                st.plotly_chart(chart, key=(tsid,tsa_params), config = config)
 
     
     elif technique_name == 'Granger Causality':

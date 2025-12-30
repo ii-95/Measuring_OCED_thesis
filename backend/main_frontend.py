@@ -47,10 +47,10 @@ session_state_variables = {'ocel_file_path':{}, 'non_atomic_evs_str':'', 'resour
                             'event_types_to_df_map':{}, 'min_seasonal_period':'', 'max_seasonal_period':'', 'TS_collection':{}, 'prev_iterations_data':{},\
                             'change_point_indices_dict' : {}, 'ts_causal_factors_dict' : {}, 'change_point_idx_ts_dict' : {}, 'threshold_based_ts_dict' : {}, 'ts_forecasts_df' : '',\
                             'granger_df':'', 'forecast_column':'', 'ar_collection':{}, 'ts_mod_ocel_json_dict': {}, 'mod_ocel_json_dict' : {}, 'mod_ocel':'',\
-                            'int_end':'', 'selected_properties':'', 'selected_object_types':'', 'selected_event_types':'','resource_object_type':'', 'tsa_params': {}, 'tsa_technique':'',\
+                            'int_end':'', 'selected_properties':'', 'selected_object_types':'', 'selected_event_types':'', 'resource_object_type':'', 'tsa_params': {}, 'tsa_technique':'',\
                             'mode':'', 'comparison_operator':'', 'threshold_1':'', 'threshold_2':'', 'use_change_point_difference_as_lag':'No', 'use_tbpd_results_as_ts_for_granger_causality':'No', \
                             'only_compare_threshold_ts':'No', 'use_granger_causal_ts_as_exogenous_variables':'No', 'append_forecasts_to_ts':'', 'granger_additional_option':'', \
-                            'p_value_threshold':'', 'periods_to_predict':'', 'edit_advanced_arima_settings':'', 'ar_history':{}, 'ar_ts_history':{}, 'ar_params_history':{}, \
+                            'p_value_threshold':'', 'periods_to_predict':'', 'edit_advanced_arima_settings':'', 'edit_advanced_pelt_settings':'', 'ar_history':{}, 'ar_ts_history':{}, 'ar_params_history':{}, \
                             'ar_json_history':{}, 'tbpd_params_list': [], 'ts_related_events_and_objects_dfs': {}, 'is_ar_empty':False}
 
 for variable, init_value in session_state_variables.items():
@@ -374,12 +374,11 @@ else:
     st.sidebar.write(f'**Selected Properties**: :blue[{selected_properties}]')
 
     a, b, c = st.columns(3)
-    d, e = st.columns(2)
+    e, f = st.columns(2)
 
     a.metric("Aggregation Function", aggregation_mode, border=True)
     b.metric("Sampling Rate", sampling_rate, border=True)
     c.metric("Assignment Mechanism", assignment_mechanism, border=True)
-
 resource_properties_selected = False
 for property in selected_properties:
     if 'Resource' in property:
@@ -473,8 +472,8 @@ int_end = time_intervals[-1].right
 st.session_state['int_start'] = int_start
 st.session_state['int_end'] = int_end
 st.sidebar.write(f'**Analysis Time Period**: :blue[{int_start.isoformat()} - {int_end.isoformat()}]')
-d.metric("Starting Time", str(int_start.date()), border=True)
-e.metric("Ending Time", str(int_end.date()), border=True)
+e.metric("Starting Time", str(int_start.date()), border=True)
+f.metric("Ending Time", str(int_end.date()), border=True)
 
 #get a cross product of objects and events df with the time intervals
 #ti_cross_objs_df = get_time_intervals_cross_objects_summary_df(objects_summary_df, time_intervals)
@@ -620,6 +619,7 @@ if first_iteration:
                 property_val_dicts_map['rp3'] = rp3(property_val_dicts_map['op2'], resource_object_type)
 
 
+        fill_limit = math.floor(len(time_intervals)/10)
         #process time series by padding on both ends with null values to represent missing values 
         #then discard any time series with any null values (not only on the ends but anywhere) and assign remaining
         #to a dict called 'TS_collection' which is then used ahead. 
@@ -632,14 +632,32 @@ if first_iteration:
                         processed_ts = time_intervals.right.to_frame().merge(ts, left_index=True, right_index=True, how='left')\
                             .drop(columns=0).iloc[:,0]
                         if property in ['ep1','op1','rp2']:
-                            processed_ts = processed_ts.replace(np.nan, 0)
+                            processed_ts = processed_ts.replace(np.nan, 0.0)
                         if not processed_ts.isna().any():
                             TS_collection[(property, non_temporal_parameters)] = processed_ts
         st.session_state['TS_collection'] = TS_collection
 else:
     prev_iterations_data = st.session_state['prev_iterations_data']
     if not prev_iterations_data:
-        prev_iterations_data = op2(object_types, object_types_to_df_map, overlapping_objects_to_time_df, aggregation_mode, sampling_rate)
+        #extract time series values and time series for results for 'change point detection' and 'threshold based point detection'
+        #from previous iterations
+        prev_iterations_data = {}
+        object_type_df = object_types_to_df_map['time series']
+        ts_obj_ids = list(object_type_df['ocel:oid'].unique())
+        for ts_obj_id in ts_obj_ids:
+            ts_obj_df = object_type_df[object_type_df[object_id_column] == ts_obj_id]
+            tsvalues = ts_obj_df[ts_obj_df[changed_field_column] == 'tsvalues']\
+                [[event_timestamp_column, 'tsvalues']].set_index(event_timestamp_column)['tsvalues']
+            prev_iterations_data[(ts_obj_id, 'tsvalues')] = tsvalues
+            for pdt in ['Change Point Detection', 'Threshold Based Point Detection']:
+                for column in ts_obj_df.columns:
+                    if column.startswith(pdt):
+                        points_df = ts_obj_df[(ts_obj_df[changed_field_column].fillna('') == column) & (ts_obj_df[column] == 1)][[event_timestamp_column, column]]
+                        points_df[event_timestamp_column] = points_df[event_timestamp_column] + pd.Timedelta('1s')
+                        merged_df = time_intervals.right.to_frame().merge(points_df, right_on=event_timestamp_column, left_index=True, how='left')
+                        merged_df[column] = merged_df[column].fillna(0)
+                        pd_ts = merged_df[[event_timestamp_column,column]].set_index(event_timestamp_column)
+                        prev_iterations_data[(ts_obj_id, column)] = pd_ts[column]
         st.session_state['prev_iterations_data'] = prev_iterations_data
 
 if "tabs" not in st.session_state:
@@ -759,7 +777,7 @@ with tabs[0]:
                 type='primary',
                 icon=":material/download:"
             )
-    create_plots_for_ts_collection(TS_collection, property_names_dict, property_parameters_map, aggregation_mode)
+    create_plots_for_ts_collection(TS_collection, property_names_dict, property_parameters_map, aggregation_mode, assignment_mechanism)
 
 i = 1
 for arname, arcollection in st.session_state['ar_history'].items():
@@ -819,7 +837,7 @@ for arname, arcollection in st.session_state['ar_history'].items():
                 type='primary',
                 icon=":material/download:"
             )
-        visualize_analysis_results(st.session_state['ar_ts_history'][arname], arcollection, tsatechnique, property_names_dict, params, property_parameters_map, aggregation_mode)
+        visualize_analysis_results(st.session_state['ar_ts_history'][arname], arcollection, tsatechnique, property_names_dict, params, property_parameters_map, aggregation_mode, assignment_mechanism)
     i = i + 1
 
 tsa_technique = st.session_state['tsa_technique']
@@ -887,21 +905,20 @@ granger_additional_option = st.session_state['granger_additional_option']
 p_value_threshold = st.session_state['p_value_threshold']
 periods_to_predict = st.session_state['periods_to_predict']
 edit_advanced_arima_settings = st.session_state['edit_advanced_arima_settings']
+edit_advanced_pelt_settings = st.session_state['edit_advanced_pelt_settings']
 
 if not tsa_params:
-    if tsa_technique == 'Change Point Detection':
+    if tsa_technique == 'Change Point Detection' and not edit_advanced_pelt_settings:
         with st.sidebar.form("tsa_params_form"):
-            cost_models = ['','rbf', 'l1', 'l2']
-            model = st.selectbox('Cost Model', cost_models)
-            min_size_options = list(range(1, math.floor(len(time_intervals)/2)))
-            min_size = st.selectbox('Minimum Segment Length', min_size_options, index=min((len(min_size_options)-1),2))
-            jump = st.selectbox('Jump', list(range(1, math.floor(len(time_intervals)/2))))
-            penalty = st.selectbox('Penalty', [1,1.5,2,2.5,3], index=1)
+            selected_edit_advanced_pelt_settings = st.selectbox('Do you wish to edit the parameters passed to the PELT algorithm for Change Point Detection \
+                                                                (Only recommended if you are well-versed with PELT. \n Passing unsuitable parameters may cause errors.)', ['','Yes', 'No'])
             st.form_submit_button('Confirm Selection')
-        if not model:
+        if not selected_edit_advanced_pelt_settings:
             st.stop()
         else:
-            tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
+            st.session_state['edit_advanced_pelt_settings'] = selected_edit_advanced_pelt_settings
+            edit_advanced_pelt_settings = selected_edit_advanced_pelt_settings
+            st.rerun()
     elif tsa_technique == 'Threshold Based Point Detection':
         if not mode:
             with st.sidebar.form("tsa_params_form"):
@@ -924,7 +941,7 @@ if not tsa_params:
             if change_point_idx_ts_dict:
                 additional_options.append('Use change point differences as lags')
             if threshold_based_ts_dict:
-                additional_options.append('Add time series generated from threshold based points to the collection of time series')
+                #additional_options.append('Add time series generated from threshold based points to the collection of time series')
                 additional_options.append('Only use time series generated from threshold based points')
             if not granger_additional_option:
                 with st.sidebar.form('tsa_params_form'):
@@ -1040,7 +1057,7 @@ if not tsa_params:
                 elif mode == 'relative change':
                     if comparison_operator == 'between':
                         selected_threshold_1 = st.number_input('Lower Threshold', step=0.001,format="%.3f")
-                        selected_threshold_1 = st.number_input('Upper Threshold', step=0.001,format="%.3f")
+                        selected_threshold_2 = st.number_input('Upper Threshold', step=0.001,format="%.3f")
                     else:
                         selected_threshold_1 = st.number_input('Threshold', step=0.001,format="%.3f")
                         selected_threshold_2 = None
@@ -1111,6 +1128,25 @@ if not tsa_params:
         tsa_params = {'periods_to_predict': periods_to_predict, 'use_granger_causal_ts_as_exogenous_variables': use_granger_causal_ts_as_exogenous_variables, 'start_p': start_p, \
                       'start_q': start_q, 'start_P': start_P, 'start_Q': start_Q, 'max_p': max_p, 'max_q': max_q, 'max_P': max_P, 'max_Q': max_Q, \
                     'information_criterion': information_criterion, 'test': test, 'maxiter': maxiter}
+    elif tsa_technique == 'Change Point Detection' and edit_advanced_pelt_settings:
+        if edit_advanced_pelt_settings == 'Yes':
+            with st.sidebar.form('cp_pelt_config_form'):
+                cost_models = ['','rbf', 'l1', 'l2']
+                model = st.selectbox('Cost Model', cost_models)
+                min_size_options = list(range(1, math.floor(len(time_intervals)/2)))
+                min_size = st.selectbox('Minimum Segment Length', min_size_options, index=min((len(min_size_options)-1),2))
+                jump = st.selectbox('Jump', list(range(1, math.floor(len(time_intervals)/2))))
+                penalty = st.selectbox('Penalty', [1,1.5,2,2.5,3], index=1)
+                st.form_submit_button('Confirm Selection')
+            if not model:
+                st.stop()
+        else:
+            model = 'rbf'
+            min_size = 3
+            jump = 1
+            penalty = 1.5
+            
+        tsa_params = {'model': model, 'min_size': min_size, 'jump': jump, 'penalty': penalty}
 
     elif tsa_technique == 'Granger Causality' and not first_iteration:
         if lag or use_change_point_difference_as_lag=='Yes':
@@ -1134,11 +1170,11 @@ else:
             mod_key = mod_key[0].upper() + mod_key[1:]
             st.sidebar.write(f'**{mod_key}**: :blue[{value}]')
         elif key == 'threshold_1':
-            if mode == 'between':
+            if comparison_operator == 'between':
                 st.sidebar.write(f'**Lower Threshold**: :blue[{value}]')
             else:
                 st.sidebar.write(f'**Threshold**: :blue[{value}]')
-        elif key == 'threshold_2' and mode == 'between':
+        elif key == 'threshold_2' and comparison_operator == 'between':
              st.sidebar.write(f'**Upper Threshold**: :blue[{value}]')
     if tsa_technique == 'Forecasting' and not first_iteration:
         st.sidebar.write(f'**Use granger causal timeseries as exogenous variables**: :blue[{use_granger_causal_ts_as_exogenous_variables}]')
@@ -1189,13 +1225,13 @@ if not first_iteration:
     if tsa_technique == 'Granger Causality':
         if use_tbpd_results_as_ts_for_granger_causality == 'Yes':
             with tabs[0]:
-                create_plots_for_ts_collection(threshold_based_ts_dict, property_names_dict, property_parameters_map, aggregation_mode)
+                create_plots_for_ts_collection(threshold_based_ts_dict, property_names_dict, property_parameters_map, aggregation_mode, assignment_mechanism)
             for tbp_tsid, tbp_ts in threshold_based_ts_dict.items():
                 if not len(tbp_ts.unique()) == 1 and len(tbp_ts[tbp_ts==1]) > 1:
                     ar_ts_collection[tbp_tsid] = tbp_ts
         elif only_compare_threshold_ts == 'Yes':
             with tabs[0]:
-                create_plots_for_ts_collection(threshold_based_ts_dict, property_names_dict, property_parameters_map, aggregation_mode)
+                create_plots_for_ts_collection(threshold_based_ts_dict, property_names_dict, property_parameters_map, aggregation_mode, assignment_mechanism)
             processed_threshold_based_ts_dict = {}
             for tbp_tsid, tbp_ts in threshold_based_ts_dict.items():
                 if not len(tbp_ts.unique()) == 1 and len(tbp_ts[tbp_ts==1]) > 1 :

@@ -187,7 +187,7 @@ def granger_causality(ts_collection, change_point_indices_dict, granger_params):
                         possible_lag = cp - cp_2
                         if possible_lag > 0 and possible_lag <= lag_limit:
                             lag_list.append(possible_lag)
-                            lag_cp_list.append((f'Causing CP: {cp_2}', f'Caused CP: {cp}'))
+                            lag_cp_list.append((f'Causing CP: {cp_2+1}', f'Caused CP: {cp+1}'))
                 if not lag_list:
                     continue
             elif not lag:
@@ -362,11 +362,11 @@ def threshold_based_point_detection(ts_collection, threshold_params):
         if mode == 'quantile':
             ts_df = ts.copy().reset_index()
             if comparison_operator == 'between':
-                bool_sr = ts_df[ts_df.columns[-1]].between(ts_df.quantile(q=threshold_1).iloc[1], ts_df.quantile(q=threshold_2).iloc[1])
+                bool_sr = ts_df[ts_df.columns[-1]].between(ts_df.quantile(q=threshold_1, interpolation='higher').iloc[1], ts_df.quantile(q=threshold_2, interpolation='higher').iloc[1])
             elif comparison_operator == 'greater or equal to':
-                bool_sr = ts_df[ts_df.columns[-1]].ge(ts_df.quantile(q=threshold_1).iloc[1])
+                bool_sr = ts_df[ts_df.columns[-1]].ge(ts_df.quantile(q=threshold_1, interpolation='higher').iloc[1])
             elif comparison_operator == 'lesser or equal to':
-                bool_sr = ts_df[ts_df.columns[-1]].le(ts_df.quantile(q=threshold_1).iloc[1])
+                bool_sr = ts_df[ts_df.columns[-1]].le(ts_df.quantile(q=threshold_1, interpolation='higher').iloc[1])
             ar = bool_sr[bool_sr].index.values.tolist()
         elif mode == 'relative change':
             rc_df = ts.pct_change().reset_index().dropna()

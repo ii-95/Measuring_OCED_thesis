@@ -145,7 +145,7 @@ def op4(selected_event_types, selected_object_types, objects_df, event_to_object
 
             #merge with dataframe containing objects of specified type assigned to the respective time intervals.
             #where an object has no related events of the specified type, assign value of '0' to the event_count.
-            df = objects_type_time_df.merge(df, on= object_id_column, how='left', suffixes=('_2', None)).replace(np.nan, 0)
+            df = objects_type_time_df.merge(df, on= object_id_column, how='left', suffixes=('_2', None)).replace(np.nan, 0.0)
 
             if df.empty:
                 continue

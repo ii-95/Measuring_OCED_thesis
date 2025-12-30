@@ -25,6 +25,7 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
     #also initialize lists that will hold the values that are to be plugged into the relevant dataframe columns, post data processing
     ts_objs_df = pd.DataFrame(columns=json_objects_df.columns.values.tolist())
     ts_obj_id_list = [None] * len(TS_collection)
+    ts_obj_type_list = ['time series'] * len(TS_collection)
     attributes_list = [[]] * len(TS_collection)
     relationships_list = [[]] * len(TS_collection)
 
@@ -33,6 +34,8 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
     json_events_df.loc[len(json_events_df)] = {'type': 'dummy', 'relationships': [], 'attributes': [], 'id': 'start_dummy_event', 'time': (int_start + pd.Timedelta('1s')).isoformat().replace("+00:00", ".000Z")}
     json_events_df.loc[len(json_events_df)] = {'type': 'dummy', 'relationships': [], 'attributes': [], 'id': 'end_dummy_event', 'time': (int_end - pd.Timedelta('1s')).isoformat().replace("+00:00", ".000Z")}
 
+    #create new object type for time series
+    json_object_types_df.loc[len(json_object_types_df)] = {'name':'time series',  'attributes':[{'name': 'tsvalues', 'type': 'float'}]}
     i=0
     for tsid, ts in TS_collection.items():
         #get all relevant variable values
@@ -48,11 +51,12 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
         #set time series object id
         ts_obj_id_list[i] = ts_obj_id
         #all time series object attributes except 'tsvalues' are static
-        attributes = [{'name': 'sampling_rate', 'value': sampling_rate, 'time': '1970-01-01T00:00:00.000Z'}, \
+        """ attributes = [{'name': 'sampling_rate', 'value': sampling_rate, 'time': '1970-01-01T00:00:00.000Z'}, \
                     {'name': 'aggregation_mode', 'value': aggregation_mode, 'time': '1970-01-01T00:00:00.000Z'},\
                         {'name': 'property_id', 'value': property_id, 'time': '1970-01-01T00:00:00.000Z'},\
                         {'name': 'property_name', 'value': property_name, 'time': '1970-01-01T00:00:00.000Z'},\
-                        {'name': 'non_temporal_parameters', 'value': non_temporal_parameters_str, 'time': '1970-01-01T00:00:00.000Z'}]
+                        {'name': 'non_temporal_parameters', 'value': non_temporal_parameters_str, 'time': '1970-01-01T00:00:00.000Z'}] """
+        attributes = []
         #get time series values, convert to iso string format and add to attributes dict of the time series object
         ts_df = ts.rename('value').to_frame()
         ts_df.index.name = 'time'
@@ -63,17 +67,9 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
         ts_df.loc[len(ts_df)] = {'name':'tsvalues', 'value':0, 'time':'1970-01-01T00:00:00.000Z'}
         ts_df = ts_df.sort_values(by='time', ignore_index= True)
         tsvalues = ts_df.to_dict('records')
-        attributes = attributes + tsvalues
+        attributes = tsvalues.copy()
         attributes_list[i] = attributes
 
-
-        #create new object type for time series
-        json_object_types_df.loc[len(json_object_types_df)] = {'name':ts_obj_id,  'attributes':[{'name': 'sampling_rate', 'type': 'string'},\
-                                                                            {'name': 'aggregation_mode', 'type': 'string'},\
-                                                                            {'name': 'property_id', 'type': 'string'},\
-                                                                            {'name': 'property_name', 'type': 'string'},\
-                                                                            {'name': 'non_temporal_parameters', 'type': 'string'},\
-                                                                            {'name': 'tsvalues', 'type': 'float'}]}
         #for the first parameter (either an event type or an object type) in the non temporal parameters of the time series, connect the time series object
         #to the original events or object of that type in the OCEL by adding a e2o or o2o qualifier containing the pertinent
         #information regarding the time series i.e., sampling rate, agg mode, property name and non temporal parameters.
@@ -145,7 +141,7 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
         i = i + 1
     #set time series dataframe columns
     ts_objs_df['id'] = ts_obj_id_list
-    ts_objs_df['type'] = ts_obj_id_list
+    ts_objs_df['type'] = ts_obj_type_list
     ts_objs_df['attributes'] = attributes_list
     ts_objs_df['relationships'] = relationships_list
     json_objects_df = pd.concat([json_objects_df, ts_objs_df], ignore_index= True)
@@ -189,6 +185,18 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
 #attribute name contains the tsa technique name and a dictionary (converted to string) of all associated parameters
     attr_name = tsa_technique + '(' + ', '.join(str(x) for x in tsa_params.values() if x != None) + ')'
     if tsa_technique != 'Granger Causality':
+
+        #create object attribute for 'time series' object type to store analysis results of type other than granger causality
+        ts_obj_type_attributes = json_object_types_df.loc[json_object_types_df['name'] == 'time series', 'attributes'].iloc[0]
+        ts_obj_type_idx = json_object_types_df[json_object_types_df['name'] == 'time series'].index.values[0]
+        if not ts_obj_type_attributes:
+            ts_obj_type_attributes = []
+        elif isinstance(ts_obj_type_attributes, dict):
+            ts_obj_type_attributes = [ts_obj_type_attributes]
+
+        ts_obj_type_attributes_mod = ts_obj_type_attributes + [{'name': attr_name, 'type': 'float'}]
+        json_object_types_df.at[ts_obj_type_idx, 'attributes'] = ts_obj_type_attributes_mod
+
         for tsid, ar in ar_collection.items():
             #get all relevant variable values
             property_id = tsid[0]
@@ -204,16 +212,6 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
             # Then for each index in ar, we set the attribute value as 1 with the timestamp set at the end of that interval.
             # We set the attribute value to 0 for the next interval, unless the index for the next interval is also in ar in which case it will 
             #also be set as 1 and so on and so forth.
-
-            ts_obj_type_attributes = json_object_types_df.loc[json_object_types_df['name'] == ts_obj_id, 'attributes'].iloc[0]
-            ts_obj_type_idx = json_object_types_df[json_object_types_df['name'] == ts_obj_id].index.values[0]
-            if not ts_obj_type_attributes:
-                ts_obj_type_attributes = []
-            elif isinstance(ts_obj_type_attributes, dict):
-                ts_obj_type_attributes = [ts_obj_type_attributes]
-
-            ts_obj_type_attributes_mod = ts_obj_type_attributes + [{'name': attr_name, 'type': 'float'}]
-            json_object_types_df.at[ts_obj_type_idx, 'attributes'] = ts_obj_type_attributes_mod
 
             ts_obj_attributes = json_objects_df[json_objects_df['id'] == ts_obj_id]['attributes'].iloc[0]
             ts_obj_idx = json_objects_df[json_objects_df['id'] == ts_obj_id].index.values[0]
