@@ -682,10 +682,10 @@ if not first_iteration:
         threshold_based_ts_dict = {}
         for key, value in prev_iterations_data.items():
             if key[0].startswith('ts'):
-                name_list = key[0].split('-')
+                name_list = key[0].split('&')
                 property = name_list[1]
                 non_temporal_parameters_str = name_list[2]
-                non_temporal_parameters_list = non_temporal_parameters_str.split('_')
+                non_temporal_parameters_list = non_temporal_parameters_str.split('|')
                 if len(non_temporal_parameters_list) > 1:
                     non_temporal_parameters = tuple(non_temporal_parameters_list)
                 else:
@@ -714,19 +714,19 @@ if not first_iteration:
                 causing_tsid_list = []
                 caused_ts = ts_factors['caused']
                 causing_ts_list = ts_factors['causing']
-                caused_ts_str = caused_ts.split('-')
+                caused_ts_str = caused_ts.split('&')
                 caused_ts_property = caused_ts_str[1]
                 caused_ts_non_temporal_parameters_str = caused_ts_str[2]
-                caused_non_temporal_parameters_list = caused_ts_non_temporal_parameters_str.split('_')
+                caused_non_temporal_parameters_list = caused_ts_non_temporal_parameters_str.split('|')
                 if len(caused_non_temporal_parameters_list) > 1:
                     caused_non_temporal_parameters = tuple(caused_non_temporal_parameters_list)
                 else:
                     caused_non_temporal_parameters = caused_non_temporal_parameters_list[0]
                 for causing_ts in causing_ts_list:
-                    causing_ts_str = causing_ts.split('-')
+                    causing_ts_str = causing_ts.split('&')
                     causing_ts_property = causing_ts_str[1]
                     causing_ts_non_temporal_parameters_str = causing_ts_str[2]
-                    causing_non_temporal_parameters_list = causing_ts_non_temporal_parameters_str.split('_')
+                    causing_non_temporal_parameters_list = causing_ts_non_temporal_parameters_str.split('|')
                     if len(causing_non_temporal_parameters_list) > 1:
                         causing_non_temporal_parameters = tuple(causing_non_temporal_parameters_list)
                     else:
@@ -742,8 +742,8 @@ if not first_iteration:
                 if column.startswith('Forecasting'):
                     forecast_column = column
             ts_forecasts_df = ts_forecasts_df[['ocel:oid', 'ocel:timestamp', forecast_column]].sort_values(by=['ocel:oid','ocel:timestamp'],ignore_index=True)
-            ts_forecasts_df['property'] = ts_forecasts_df['ocel:oid'].str.split(pat='-').str[1]
-            ts_forecasts_df['non_temporal_parameters'] = ts_forecasts_df['ocel:oid'].str.split(pat='-').str[-1].str.split(pat='_').apply(lambda x: tuple(x) if len(x) > 1 else x[0])
+            ts_forecasts_df['property'] = ts_forecasts_df['ocel:oid'].str.split(pat='&').str[1]
+            ts_forecasts_df['non_temporal_parameters'] = ts_forecasts_df['ocel:oid'].str.split(pat='&').str[-1].str.split(pat='|').apply(lambda x: tuple(x) if len(x) > 1 else x[0])
             ts_forecasts_df['tsid'] = ts_forecasts_df.apply(lambda x: tuple((x['property'], x['non_temporal_parameters'])), axis=1)
             ts_forecasts_df = ts_forecasts_df[['tsid', event_timestamp_column, forecast_column]]
 

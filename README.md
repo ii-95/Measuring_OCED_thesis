@@ -9,6 +9,7 @@
 
 ## Notes:
 - Python 3.11 is recommended to avoid conflicts with packages in requirements.txt. 
+- The event/object types in your OCEL must not contain the characters '&' or '|' in their names. This will lead to errors.
 - Whenever the app is loading/executing, an animation showing a running stick figure is displayed at the top right to indicate this. 
 - Time series with no values for one or more time periods will be discarded and not displayed at all.
 - Constant time series (same value in every interval) will be displayed at first but not considered for further analysis.
@@ -21,3 +22,30 @@
 
 ## Reason for only supporting .json format:
 The implementation relies heavily on pm4py, especially for reading/writing the OCEL. Unfortunately, pm4py frequently faces trouble reading publicly available OCELs (from the ocel-standard webpage) in .sqlite and .xml formats. In case of former, it sometimes discards object types/event types and reports constaint violations whereas in case of latter, it sometimes fails to read the log altogether. On the contrary, .json works without any errors, everytime. Since fixing issues in the logs or PM4PY itself is out of scope for this thesis and so is creating an OCEL reader from scratch, we will stick to only using .json format.
+
+
+## (Informal) Specification for downloadable .json analysis results files
+
+    - Change Point Detection:
+
+        tsid: [property_id, non-temporal parameters], 
+
+        ar:  [(list of indices of change points detected in the time series)]
+
+    - Threshold Based Point Detection:
+
+        tsid: [property_id, non-temporal parameters], 
+
+        ar:  [(list of indices of points detected based on inputs to the analysis technique in the time series)]
+
+    - Forecasting:
+
+        tsid: [property_id, non-temporal parameters], 
+
+        ar:  {(a map of timestamps (iso string format) and float values that represent a series of forecast values for a given number of time periods)}
+
+    - Granger Causality:
+
+        tsid: [property_id, non-temporal parameters], 
+
+        ar:  [(list of pairs where each pair contains the identifier of a time series and a list of integers representing the lags by which that time series granger causes the time series whose identifier is the key i.e. tsid)]

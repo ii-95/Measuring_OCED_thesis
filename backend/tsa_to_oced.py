@@ -43,11 +43,11 @@ def insert_time_series_into_ocel(TS_collection, ocel_json_dict, int_start, int_e
         property_name = property_names_dict[property_id]
         non_temporal_parameters = tsid[1]
         if isinstance(non_temporal_parameters, tuple):
-            non_temporal_parameters_str = '_'.join(non_temporal_parameters)
+            non_temporal_parameters_str = '|'.join(non_temporal_parameters)
         else:
             non_temporal_parameters_str = str(non_temporal_parameters)
-        qualifer_str = 'ts' + '-' + sampling_rate + '-' + aggregation_mode + '-' + property_name + '-' + non_temporal_parameters_str
-        ts_obj_id = 'ts-' + property_id + '-' + non_temporal_parameters_str
+        qualifer_str = 'ts' + '&' + sampling_rate + '&' + aggregation_mode + '&' + property_name + '&' + non_temporal_parameters_str
+        ts_obj_id = 'ts&' + property_id + '&' + non_temporal_parameters_str
         #set time series object id
         ts_obj_id_list[i] = ts_obj_id
         #all time series object attributes except 'tsvalues' are static
@@ -203,10 +203,10 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
             property_name = property_names_dict[property_id]
             non_temporal_parameters = tsid[1]
             if isinstance(non_temporal_parameters, tuple):
-                non_temporal_parameters_str = '_'.join(non_temporal_parameters)
+                non_temporal_parameters_str = '|'.join(non_temporal_parameters)
             else:
                 non_temporal_parameters_str = str(non_temporal_parameters)
-            ts_obj_id = 'ts-' + property_id + '-' + non_temporal_parameters_str
+            ts_obj_id = 'ts&' + property_id + '&' + non_temporal_parameters_str
 
             #we create an object attribute for the ar that will have an initial value of 0.
             # Then for each index in ar, we set the attribute value as 1 with the timestamp set at the end of that interval.
@@ -255,11 +255,10 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
             caused_ts_property_id = caused_tsid[0]
             caused_ts_non_temporal_parameters = caused_tsid[1]
             if isinstance(caused_ts_non_temporal_parameters, tuple):
-                caused_ts_non_temporal_parameters_str = '_'.join(caused_ts_non_temporal_parameters)
+                caused_ts_non_temporal_parameters_str = '|'.join(caused_ts_non_temporal_parameters)
             else:
                 caused_ts_non_temporal_parameters_str = str(caused_ts_non_temporal_parameters)
-            caused_ts_obj_id = 'ts-' + caused_ts_property_id + '-' + caused_ts_non_temporal_parameters_str
-
+            caused_ts_obj_id = 'ts&' + caused_ts_property_id + '&' + caused_ts_non_temporal_parameters_str
             caused_ts_obj_relationships = json_objects_df[json_objects_df['id'] == caused_ts_obj_id]['relationships'].iloc[0]
             caused_ts_obj_idx = json_objects_df[json_objects_df['id'] == caused_ts_obj_id].index.values[0]
             if not caused_ts_obj_relationships:
@@ -274,10 +273,10 @@ def insert_ar_into_ocel(ar_collection, tsa_technique, tsa_params, ocel_json_dict
                 causing_ts_property_id = causing_tsid[0]
                 causing_ts_non_temporal_parameters = causing_tsid[1]
                 if isinstance(causing_ts_non_temporal_parameters, tuple):
-                    causing_ts_non_temporal_parameters_str = '_'.join(causing_ts_non_temporal_parameters)
+                    causing_ts_non_temporal_parameters_str = '|'.join(causing_ts_non_temporal_parameters)
                 else:
                     causing_ts_non_temporal_parameters_str = str(causing_ts_non_temporal_parameters)
-                causing_ts_obj_id = 'ts-' + causing_ts_property_id + '-' + causing_ts_non_temporal_parameters_str
+                causing_ts_obj_id = 'ts&' + causing_ts_property_id + '&' + causing_ts_non_temporal_parameters_str
                 lag = lag_list[i]
                 caused_ts_obj_relationships = caused_ts_obj_relationships + [{'objectId': causing_ts_obj_id, 'qualifier': f'Granger caused by (with lags: {lag})'}]
             json_objects_df.at[caused_ts_obj_idx, 'relationships'] = caused_ts_obj_relationships
