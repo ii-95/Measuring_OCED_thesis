@@ -74,33 +74,36 @@ def change_point_detection(ts_collection, change_point_params):
 
 def get_seasonal_periodicities(ts_collection, min_seasonal_period, max_seasonal_period):
     ts_to_sp_map = {}
+    if max_seasonal_period > min_seasonal_period:
+        sp_candidates = range(max_seasonal_period, min_seasonal_period-1, -1)
+    else:
+        sp_candidates = []
     for tsid, ts in ts_collection.items():
-        if tsid[0].startswith('Threshold Based Points'):
-            sp_list = []
-        else:
-            prev_sp = max_seasonal_period*2 + 1 
-            sp_list = []
+        if not tsid[0].startswith('Threshold Based Points'):
+            detected_sp = 0
             seasonal_diff_ts = ts.copy()
-            if max_seasonal_period > min_seasonal_period:
-                sp_candidates = range(max_seasonal_period, min_seasonal_period-1, -1)
-            else:
-                sp_candidates = []
             for sp in sp_candidates:
                 ocsb_test = OCSBTest(sp)
-                if ocsb_test.estimate_seasonal_differencing_term(seasonal_diff_ts) and sp < prev_sp/2:
-                    seasonal_diff_ts = seasonal_diff_ts.diff(sp).dropna()
-                    sp_list.append(sp)
-                    prev_sp = sp
-        ts_to_sp_map[tsid] = sp_list
+                try:
+                    if ocsb_test.estimate_seasonal_differencing_term(seasonal_diff_ts):
+                        detected_sp = sp
+                        break
+                except:
+                        detected_sp = 0
+                        continue
+            ts_to_sp_map[tsid] = detected_sp
+        else:
+            ts_to_sp_map[tsid] = 0
     return ts_to_sp_map
 
-#apply differencing to each time series in a collection according to the seasonal periods provided for each time series
+#apply differencing to each time series in a collection according to the seasonal periodicity provided for each time series
 #return differenced time series
 def apply_seasonal_differencing(ts_collection, ts_to_sp_map):
     seasonal_diff_ts_collection = {}
     for tsid, ts in ts_collection.items():
         seasonal_diff_ts = ts.copy()
-        for sp in ts_to_sp_map[tsid]:
+        sp = ts_to_sp_map[tsid]
+        if sp > 0:
             seasonal_diff_ts = seasonal_diff_ts.diff(sp).dropna()
         seasonal_diff_ts_collection[tsid] = seasonal_diff_ts
     return seasonal_diff_ts_collection
@@ -280,9 +283,9 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, ts_causal_fa
     for tsid, ts in ts_collection.items():
         ts_fc = ts.copy()
         ts_fc.index = pd.PeriodIndex(ts_fc.index, freq=freq)
-        sp_list = ts_to_sp_map[tsid]
-        if sp_list:
-            sp_ts = sp_list[0]
+        sp = ts_to_sp_map[tsid]
+        if sp > 0:
+            sp_ts = sp
         else:
             sp_ts = 1
         forecaster = AutoARIMA(sp=sp_ts, start_p = start_p, start_q = start_q, start_P = start_P, start_Q = start_Q,\
