@@ -464,8 +464,6 @@ if len(time_intervals) < 4:
     st.stop()
 elif len(time_intervals) <= 12:
     st.warning(f'The specified sampling rate and/or time interval range leads to time series containing too few ({len(time_intervals)}) data points whereas a minimum of 30 data points is recommended. \n This will lead to unreliable analysis results and in extreme cases, failure to execute the analysis altogether. \n For timeseries of less than or equal to 12 data points, \'Granger Causality\' and \'Forecasting\' cannot be performed. \n Consider using a finer sampling rate or expanding the time period.')
-elif len(time_intervals) < 30:
-    st.warning(f'The specified sampling rate and/or time interval range leads to time series containing too few ({len(time_intervals)}) data points whereas a minimum of 30 data points is recommended. \n This will lead to unreliable analysis results and in extreme cases, failure to execute the analysis altogether. \n Consider using a finer sampling rate or expanding the time period.')
 #update start and end according to the time intervals calculated
 int_start = time_intervals[0].left
 int_end = time_intervals[-1].right
