@@ -14,6 +14,7 @@
 - Time series with no values for one or more time periods will be discarded and not displayed at all.
 - Constant time series (same value in every interval) will be displayed at first but not considered for further analysis.
 - The feature for supporting non-atomic events via specification of an endtime attribute has not been tested extensively due to lack of publicly available OCELs that contain non-atomic events. Therefore, this feature remains experimental and prone to errors.
+- Please don't use the modified log produced by the tool. The download feature is only for verficiation or external usage. The recycling of the log is performed internally.
 - Timeseries for service time and soujourn time are only generated if the log contains non-atomic events since they are equal to 0 and waiting time, respectively, in case of atomic events.
 - In case if you select a wrong option that cannot be changed after confirming, click the reset button (or refresh the webpage) and start over.
 - If you want to minimize the runtime, try to select only a few event types/object types/properties at one time.
