@@ -317,9 +317,9 @@ def forecasting(ts_collection, ts_to_sp_map, sampling_rate, offset, ts_causal_fa
                 exo_df.index = pd.PeriodIndex(exo_df.index, freq=freq)
                 pred_exo_df = pred_causing_df
                 pred_exo_df.index = pd.PeriodIndex(pred_exo_df.index, freq=freq)
-                sp_list = ts_to_sp_map[tsid]
-                if sp_list:
-                    sp_ts = sp_list[0]
+                sp = ts_to_sp_map[tsid]
+                if sp > 0:
+                    sp_ts = sp
                 else:
                     sp_ts = 1
                 forecaster = AutoARIMA(sp=sp_ts, start_p = start_p, start_q = start_q, start_P = start_P, start_Q = start_Q,\
