@@ -1,0 +1,1024 @@
+[
+    {
+        "tsid": [
+            "ep1",
+            "Create Purchase Requisition"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Approve Purchase Requisition"
+        ],
+        "ar": [
+            27
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Delegate Purchase Requisition Approval"
+        ],
+        "ar": [
+            5
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Create Request for Quotation"
+        ],
+        "ar": [
+            12
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Create Purchase Order"
+        ],
+        "ar": [
+            16,
+            20,
+            28
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Approve Purchase Order"
+        ],
+        "ar": [
+            28,
+            36
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Create Goods Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Create Invoice Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Perform Two-Way Match"
+        ],
+        "ar": [
+            19,
+            22,
+            29
+        ]
+    },
+    {
+        "tsid": [
+            "ep1",
+            "Execute Payment"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "ep3",
+            "Create Purchase Requisition"
+        ],
+        "ar": [
+            11,
+            14
+        ]
+    },
+    {
+        "tsid": [
+            "ep3",
+            "Approve Purchase Requisition"
+        ],
+        "ar": [
+            10,
+            14,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "ep3",
+            "Execute Payment"
+        ],
+        "ar": [
+            19
+        ]
+    },
+    {
+        "tsid": [
+            "ep4",
+            [
+                "Create Purchase Requisition",
+                "material"
+            ]
+        ],
+        "ar": [
+            11,
+            14
+        ]
+    },
+    {
+        "tsid": [
+            "ep4",
+            [
+                "Execute Payment",
+                "goods receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "ep4",
+            [
+                "Execute Payment",
+                "purchase_order"
+            ]
+        ],
+        "ar": [
+            19,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "ep4",
+            [
+                "Approve Purchase Requisition",
+                "material"
+            ]
+        ],
+        "ar": [
+            10,
+            14,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "op1",
+            "goods receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op1",
+            "invoice receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op1",
+            "material"
+        ],
+        "ar": [
+            27,
+            35
+        ]
+    },
+    {
+        "tsid": [
+            "op1",
+            "payment"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op1",
+            "purchase_order"
+        ],
+        "ar": [
+            17,
+            22,
+            28,
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "op1",
+            "purchase_requisition"
+        ],
+        "ar": [
+            10,
+            20,
+            27
+        ]
+    },
+    {
+        "tsid": [
+            "op1",
+            "quotation"
+        ],
+        "ar": [
+            16,
+            20,
+            29,
+            32
+        ]
+    },
+    {
+        "tsid": [
+            "op2",
+            [
+                "material",
+                "Quantity (EKPO-MENGE)"
+            ]
+        ],
+        "ar": [
+            4,
+            7
+        ]
+    },
+    {
+        "tsid": [
+            "op2",
+            [
+                "material",
+                "Net Price (EKPO-NETPR)"
+            ]
+        ],
+        "ar": [
+            5
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "goods receipt"
+        ],
+        "ar": [
+            20,
+            23
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "invoice receipt"
+        ],
+        "ar": [
+            19,
+            25,
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "payment"
+        ],
+        "ar": [
+            11,
+            16,
+            25,
+            30
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "purchase_order"
+        ],
+        "ar": [
+            8,
+            16,
+            19,
+            23,
+            37,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "purchase_requisition"
+        ],
+        "ar": [
+            34,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op3",
+            "quotation"
+        ],
+        "ar": [
+            17,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "purchase_requisition",
+                "Create Purchase Requisition"
+            ]
+        ],
+        "ar": [
+            34,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "quotation",
+                "Approve Purchase Order"
+            ]
+        ],
+        "ar": [
+            17,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "goods receipt",
+                "Create Goods Receipt"
+            ]
+        ],
+        "ar": [
+            19,
+            23,
+            35,
+            38
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "purchase_order",
+                "Create Goods Receipt"
+            ]
+        ],
+        "ar": [
+            8,
+            14,
+            19,
+            23,
+            31
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "invoice receipt",
+                "Create Invoice Receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "invoice receipt",
+                "Perform Two-Way Match"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "quotation",
+                "Create Purchase Order"
+            ]
+        ],
+        "ar": [
+            17,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "goods receipt",
+                "Execute Payment"
+            ]
+        ],
+        "ar": [
+            5,
+            8,
+            16,
+            23,
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "invoice receipt",
+                "Execute Payment"
+            ]
+        ],
+        "ar": [
+            11,
+            15,
+            19,
+            30,
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "payment",
+                "Execute Payment"
+            ]
+        ],
+        "ar": [
+            11,
+            16
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "purchase_order",
+                "Execute Payment"
+            ]
+        ],
+        "ar": [
+            8,
+            16,
+            23
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "material",
+                "Approve Purchase Requisition"
+            ]
+        ],
+        "ar": [
+            5
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "purchase_requisition",
+                "Approve Purchase Requisition"
+            ]
+        ],
+        "ar": [
+            4
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "purchase_requisition",
+                "Delegate Purchase Requisition Approval"
+            ]
+        ],
+        "ar": [
+            4
+        ]
+    },
+    {
+        "tsid": [
+            "op4",
+            [
+                "material",
+                "Delegate Purchase Requisition Approval"
+            ]
+        ],
+        "ar": [
+            5
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "goods receipt"
+        ],
+        "ar": [
+            22
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "invoice receipt"
+        ],
+        "ar": [
+            26,
+            30,
+            34
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "material"
+        ],
+        "ar": [
+            31,
+            34
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "payment"
+        ],
+        "ar": [
+            11,
+            19,
+            26,
+            30,
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "purchase_order"
+        ],
+        "ar": [
+            17,
+            25,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "purchase_requisition"
+        ],
+        "ar": [
+            4,
+            8,
+            16,
+            22
+        ]
+    },
+    {
+        "tsid": [
+            "op5",
+            "quotation"
+        ],
+        "ar": [
+            24,
+            39
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "material",
+                "material"
+            ]
+        ],
+        "ar": [
+            14
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "material",
+                "purchase_requisition"
+            ]
+        ],
+        "ar": [
+            11,
+            14
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "goods receipt",
+                "purchase_order"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "goods receipt",
+                "invoice receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "goods receipt",
+                "goods receipt"
+            ]
+        ],
+        "ar": [
+            17,
+            28
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "goods receipt",
+                "payment"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "invoice receipt",
+                "purchase_order"
+            ]
+        ],
+        "ar": [
+            19,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "payment",
+                "purchase_order"
+            ]
+        ],
+        "ar": [
+            19,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "op6",
+            [
+                "purchase_order",
+                "purchase_order"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Approve Purchase Requisition"
+        ],
+        "ar": [
+            4
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Create Request for Quotation"
+        ],
+        "ar": [
+            6,
+            11
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Create Purchase Order"
+        ],
+        "ar": [
+            9,
+            16
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Approve Purchase Order"
+        ],
+        "ar": [
+            14
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Create Goods Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Create Invoice Receipt"
+        ],
+        "ar": [
+            29,
+            32
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Perform Two-Way Match"
+        ],
+        "ar": [
+            37
+        ]
+    },
+    {
+        "tsid": [
+            "pp1",
+            "Execute Payment"
+        ],
+        "ar": [
+            4,
+            16,
+            35
+        ]
+    },
+    {
+        "tsid": [
+            "pp2",
+            "Approve Purchase Order"
+        ],
+        "ar": [
+            17,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "pp2",
+            "Create Goods Receipt"
+        ],
+        "ar": [
+            33,
+            36
+        ]
+    },
+    {
+        "tsid": [
+            "pp2",
+            "Create Invoice Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp2",
+            "Perform Two-Way Match"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp2",
+            "Execute Payment"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Approve Purchase Requisition"
+        ],
+        "ar": [
+            4
+        ]
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Create Request for Quotation"
+        ],
+        "ar": [
+            6,
+            11
+        ]
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Create Purchase Order"
+        ],
+        "ar": [
+            9,
+            16
+        ]
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Approve Purchase Order"
+        ],
+        "ar": [
+            17,
+            22,
+            28,
+            40
+        ]
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Create Goods Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Create Invoice Receipt"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Perform Two-Way Match"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp5",
+            "Execute Payment"
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp6",
+            [
+                "Execute Payment",
+                "goods receipt"
+            ]
+        ],
+        "ar": [
+            38
+        ]
+    },
+    {
+        "tsid": [
+            "pp6",
+            [
+                "Execute Payment",
+                "purchase_order"
+            ]
+        ],
+        "ar": [
+            8
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Approve Purchase Order",
+                "quotation"
+            ]
+        ],
+        "ar": [
+            17,
+            21
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Create Goods Receipt",
+                "goods receipt"
+            ]
+        ],
+        "ar": [
+            33,
+            36
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Create Goods Receipt",
+                "purchase_order"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Create Invoice Receipt",
+                "invoice receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Create Invoice Receipt",
+                "goods receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Perform Two-Way Match",
+                "invoice receipt"
+            ]
+        ],
+        "ar": [
+            12
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Perform Two-Way Match",
+                "goods receipt"
+            ]
+        ],
+        "ar": [
+            26,
+            31
+        ]
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Execute Payment",
+                "goods receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Execute Payment",
+                "invoice receipt"
+            ]
+        ],
+        "ar": []
+    },
+    {
+        "tsid": [
+            "pp7",
+            [
+                "Execute Payment",
+                "purchase_order"
+            ]
+        ],
+        "ar": []
+    }
+]

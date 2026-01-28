@@ -1,0 +1,2699 @@
+[
+    {
+        "tsid":[
+            "ep1",
+            "Approve Purchase Order"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "material"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 35",
+                            "Caused CP: 36"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep1",
+            "Approve Purchase Requisition"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep1",
+            "Create Purchase Order"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Approve Purchase Requisition"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "material"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep1",
+            "Create Request for Quotation"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 12"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep1",
+            "Perform Two-Way Match"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Approve Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "material"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        5,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "quotation"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep3",
+            "Approve Purchase Requisition"
+        ],
+        "ar":[
+            [
+                [
+                    "op2",
+                    [
+                        "material",
+                        "Quantity (EKPO-MENGE)"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 7",
+                            "Caused CP: 14"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep3",
+            "Execute Payment"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "purchase_order",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 14",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep4",
+            [
+                "Approve Purchase Requisition",
+                "material"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op2",
+                    [
+                        "material",
+                        "Quantity (EKPO-MENGE)"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 7",
+                            "Caused CP: 14"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep4",
+            [
+                "Execute Payment",
+                "purchase_order"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "quotation"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 38",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Approve Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Create Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "material"
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        12,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 35"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 30",
+                            "Caused CP: 35"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "purchase_order"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep3",
+                    "Execute Payment"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep4",
+                    [
+                        "Execute Payment",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "material"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "quotation"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "invoice receipt",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "payment",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "purchase_requisition"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 27"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "payment"
+                ],
+                [
+                    [
+                        4,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 20"
+                        ]
+                    ],
+                    [
+                        11,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 5",
+                            "Caused CP: 10"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 20"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "quotation"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Approve Purchase Requisition"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "material"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 29"
+                        ]
+                    ],
+                    [
+                        5,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_requisition"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 29"
+                        ]
+                    ],
+                    [
+                        5,
+                        [
+                            "Causing CP: 27",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "payment"
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 20"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 25",
+                            "Caused CP: 29"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 30",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        9,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 29"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 30",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "goods receipt"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Perform Two-Way Match"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 20"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 22",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 22",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "invoice receipt"
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 25"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "purchase_order",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 14",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "goods receipt",
+                        "goods receipt"
+                    ]
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 25"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Approve Purchase Order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 22",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "payment"
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "invoice receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "purchase_order"
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "invoice receipt"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "goods receipt",
+                        "goods receipt"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "purchase_requisition"
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "invoice receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        10,
+                        [
+                            "Causing CP: 30",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op3",
+            "quotation"
+        ],
+        "ar":[
+            [
+                [
+                    "pp1",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "goods receipt",
+                "Create Goods Receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 22",
+                            "Caused CP: 23"
+                        ]
+                    ],
+                    [
+                        1,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 38"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "invoice receipt"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 38"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "quotation"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 23"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 21",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Approve Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 23"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 21",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Create Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 23"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 21",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "goods receipt",
+                        "goods receipt"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 35"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 38"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "invoice receipt",
+                "Execute Payment"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "payment"
+                ],
+                [
+                    [
+                        4,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 15"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        5,
+                        [
+                            "Causing CP: 25",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "payment",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        4,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 15"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        4,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 15"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "payment",
+                "Execute Payment"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "invoice receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 16"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "purchase_order",
+                "Create Goods Receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "goods receipt"
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "goods receipt",
+                        "goods receipt"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "purchase_order",
+                "Execute Payment"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "payment",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 23"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "quotation",
+                "Approve Purchase Order"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "pp1",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op4",
+            [
+                "quotation",
+                "Create Purchase Order"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "pp1",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        10,
+                        [
+                            "Causing CP: 11",
+                            "Caused CP: 21"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op5",
+            "goods receipt"
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op5",
+            "payment"
+        ],
+        "ar":[
+            [
+                [
+                    "ep3",
+                    "Execute Payment"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep4",
+                    [
+                        "Execute Payment",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 26"
+                        ]
+                    ],
+                    [
+                        11,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "goods receipt"
+                ],
+                [
+                    [
+                        10,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "invoice receipt",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 26"
+                        ]
+                    ],
+                    [
+                        11,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "payment",
+                        "purchase_order"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 26"
+                        ]
+                    ],
+                    [
+                        11,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 30"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op5",
+            "purchase_order"
+        ],
+        "ar":[
+            [
+                [
+                    "op5",
+                    "goods receipt"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 22",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp1",
+                    "Approve Purchase Order"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 14",
+                            "Caused CP: 25"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp1",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Request for Quotation"
+                ],
+                [
+                    [
+                        11,
+                        [
+                            "Causing CP: 6",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op5",
+            "purchase_requisition"
+        ],
+        "ar":[
+            [
+                [
+                    "ep3",
+                    "Approve Purchase Requisition"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        12,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep4",
+                    [
+                        "Approve Purchase Requisition",
+                        "material"
+                    ]
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        12,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "invoice receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 15",
+                            "Caused CP: 16"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "goods receipt",
+                "goods receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op3",
+                    "invoice receipt"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 25",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp2",
+                    "Approve Purchase Order"
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 21",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp7",
+                    [
+                        "Approve Purchase Order",
+                        "quotation"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 21",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "invoice receipt",
+                "purchase_order"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "quotation"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 38",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Approve Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Create Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "material",
+                "material"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "purchase_requisition",
+                        "Approve Purchase Requisition"
+                    ]
+                ],
+                [
+                    [
+                        10,
+                        [
+                            "Causing CP: 4",
+                            "Caused CP: 14"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "payment",
+                "purchase_order"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "purchase_order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ],
+                    [
+                        3,
+                        [
+                            "Causing CP: 37",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op3",
+                    "quotation"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 38",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Approve Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op4",
+                    [
+                        "quotation",
+                        "Create Purchase Order"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 19"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp1",
+            "Create Invoice Receipt"
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Create Goods Receipt"
+                    ]
+                ],
+                [
+                    [
+                        10,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 29"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp2",
+            "Approve Purchase Order"
+        ],
+        "ar":[
+            [
+                [
+                    "pp1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp5",
+            "Approve Purchase Order"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 22"
+                        ]
+                    ],
+                    [
+                        2,
+                        [
+                            "Causing CP: 20",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "quotation"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        9,
+                        [
+                            "Causing CP: 19",
+                            "Caused CP: 28"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "goods receipt",
+                        "goods receipt"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 17",
+                            "Caused CP: 22"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp6",
+            [
+                "Execute Payment",
+                "goods receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "Approve Purchase Order"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 36",
+                            "Caused CP: 38"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op5",
+                    "invoice receipt"
+                ],
+                [
+                    [
+                        12,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 38"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp7",
+            [
+                "Approve Purchase Order",
+                "quotation"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "pp1",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "Create Purchase Order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 16",
+                            "Caused CP: 17"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp7",
+            [
+                "Perform Two-Way Match",
+                "goods receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op5",
+                    "payment"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 30",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp7",
+            [
+                "Perform Two-Way Match",
+                "invoice receipt"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op4",
+                    [
+                        "goods receipt",
+                        "Execute Payment"
+                    ]
+                ],
+                [
+                    [
+                        7,
+                        [
+                            "Causing CP: 5",
+                            "Caused CP: 12"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    }
+]

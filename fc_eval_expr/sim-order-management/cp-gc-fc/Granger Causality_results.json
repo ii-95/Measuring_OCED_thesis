@@ -1,0 +1,992 @@
+[
+    {
+        "tsid":[
+            "ep1",
+            "ship order"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "items"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op1",
+                    "orders"
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp1",
+                    "pick item"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "pick item"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 31"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep3",
+            "place order"
+        ],
+        "ar":[
+            [
+                [
+                    "op6",
+                    [
+                        "items",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 36"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "items",
+                        "orders"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 36"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "ep4",
+            [
+                "place order",
+                "items"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op6",
+                    [
+                        "items",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 36"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "op6",
+                    [
+                        "items",
+                        "orders"
+                    ]
+                ],
+                [
+                    [
+                        2,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 36"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "items"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "pick item"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 10",
+                            "Caused CP: 16"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep1",
+                    "ship order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op1",
+            "orders"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "pick item"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 23",
+                            "Caused CP: 29"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep1",
+                    "ship order"
+                ],
+                [
+                    [
+                        3,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        8,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 39"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op5",
+            "items"
+        ],
+        "ar":[
+            [
+                [
+                    "op5",
+                    "orders"
+                ],
+                [
+                    [
+                        4,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 32"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "items",
+                "items"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep3",
+                    "place order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep4",
+                    [
+                        "place order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "op6",
+            [
+                "items",
+                "orders"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "ep3",
+                    "place order"
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "ep4",
+                    [
+                        "place order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        1,
+                        [
+                            "Causing CP: 26",
+                            "Caused CP: 27"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp1",
+            "pick item"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 37"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp2",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp6",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp7",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp2",
+            "ship order"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "orders"
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp6",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp5",
+            "pick item"
+        ],
+        "ar":[
+            [
+                [
+                    "ep1",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 31",
+                            "Caused CP: 37"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp2",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "ship order"
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp6",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp7",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        6,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 34"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp5",
+            "ship order"
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "orders"
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp6",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp6",
+            [
+                "ship order",
+                "items"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "orders"
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp2",
+                    "ship order"
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp5",
+                    "ship order"
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp7",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    },
+    {
+        "tsid":[
+            "pp7",
+            [
+                "ship order",
+                "items"
+            ]
+        ],
+        "ar":[
+            [
+                [
+                    "op1",
+                    "orders"
+                ],
+                [
+                    [
+                        8,
+                        [
+                            "Causing CP: 29",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        6,
+                        [
+                            "Causing CP: 34",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ],
+            [
+                [
+                    "pp6",
+                    [
+                        "ship order",
+                        "items"
+                    ]
+                ],
+                [
+                    [
+                        5,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 33"
+                        ]
+                    ],
+                    [
+                        9,
+                        [
+                            "Causing CP: 28",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        4,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 37"
+                        ]
+                    ],
+                    [
+                        7,
+                        [
+                            "Causing CP: 33",
+                            "Caused CP: 40"
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    }
+]
