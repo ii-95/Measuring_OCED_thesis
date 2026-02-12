@@ -9,7 +9,7 @@
 
 ## Notes:
 - Python 3.11 is recommended to avoid conflicts with packages in requirements.txt.
-- The sidebar form may be hidden when you start the application. Please click the double arrows on the top left to make it visible.
+- The sidebar form may be hidden when you start the application leading to a nearly blank display. Please click the double arrows on the top left to make it visible.
 - The event/object types in your OCEL must not contain the characters '&' or '|' in their names. This will lead to errors.
 - Whenever the app is loading/executing, an animation showing a running stick figure is displayed at the top right to indicate this. 
 - Time series with no values for one or more time periods will be discarded and not displayed at all.
